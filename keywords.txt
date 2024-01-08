@@ -1,0 +1,82 @@
+#######################################
+# Syntax Coloring Map for TinyGPSPlus
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+TinyGPSAsync	KEYWORD1
+ParsedSentence	KEYWORD1
+LocationItem	KEYWORD1
+QualityItem	KEYWORD1
+FixStatusItem	KEYWORD1
+QualityEnum	KEYWORD1
+StatusEnum	KEYWORD1
+DateItem	KEYWORD1
+TimeItem	KEYWORD1
+SpeedItem	KEYWORD1
+CourseItem	KEYWORD1
+AltitudeItem	KEYWORD1
+SatelliteCountItem	KEYWORD1
+HDOPItem	KEYWORD1
+SatelliteItem	KEYWORD1
+SentenceItem	KEYWORD1
+StatisticsCounters	KEYWORD1
+DiagnosticItem	KEYWORD1
+Raw	KEYWORD1
+SatInfo	KEYWORD1
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+IsValid	KEYWORD2
+ChecksumValid	KEYWORD2
+IsNew	KEYWORD2
+Age	KEYWORD2
+Timestamp	KEYWORD2
+TalkerId	KEYWORD2
+SentenceId	KEYWORD2
+Clear	KEYWORD2
+CharCount	KEYWORD2
+Get	KEYWORD2
+EverUpdated	KEYWORD2
+GetAsRaw	KEYWORD2
+Dbl	KEYWORD2
+IsPositionValid	KEYWORD2
+GetAsKnots	KEYWORD2
+GetAsMph	KEYWORD2
+GetAsMps	KEYWORD2
+GetAsKmph	KEYWORD2
+GetAsMeters	KEYWORD2
+GetAsMiles	KEYWORD2
+GetAsKilometers	KEYWORD2
+GetAsFeet	KEYWORD2
+Location	KEYWORD2
+Date	KEYWORD2
+Time	KEYWORD2
+Speed	KEYWORD2
+Course	KEYWORD2
+Altitude	KEYWORD2
+SatelliteCount	KEYWORD2
+Quality	KEYWORD2
+FixStatus	KEYWORD2
+HDOP	KEYWORD2
+Sentence	KEYWORD2
+Satellites	KEYWORD2
+Diagnostic	KEYWORD2
+Cardinal	KEYWORD2
+DistanceBetween	KEYWORD2
+CourseTo	KEYWORD2
+negative	KEYWORD2
+meters	KEYWORD2
+miles	KEYWORD2
+kilometers	KEYWORD2
+feet	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+

@@ -1,0 +1,22 @@
+{
+  "name": "TinyGPSAsync",
+  "version": "0.0.1",
+  "keywords": "gps,NMEA,ESP32",
+  "description": "A multi-threaded NMEA parser for ESP32",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/mikalhart/TinyGPSAsync.git"
+  },
+  "authors":
+  [
+    {
+       "name": "Mikal Hart",
+       "email": "mikal@arduniana.org",
+       "url": "http://arduiniana.org",
+       "maintainer": true
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": "esp32"
+}
