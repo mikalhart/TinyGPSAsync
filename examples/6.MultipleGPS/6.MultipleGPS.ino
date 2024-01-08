@@ -5,10 +5,10 @@ TinyGPSAsync gps1;
 TinyGPSAsync gps2;
 
 /* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX1_PIN D0
-#define GPS_TX1_PIN -1
-#define GPS_RX2_PIN D1
-#define GPS_TX2_PIN -1
+#define GPS_RX1_PIN 2
+#define GPS_TX1_PIN (-1)
+#define GPS_RX2_PIN 3
+#define GPS_TX2_PIN (-1)
 
 #define GPS_BAUD 9600
 #define GPS1Serial Serial1
