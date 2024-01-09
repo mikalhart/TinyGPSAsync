@@ -38,11 +38,11 @@ int ElevFromSat(std::vector<TinyGPSAsync::SatelliteItem::SatInfo> &sats, int sat
 void Header()
 {
   Serial.println();
-  Serial.printf("       Sat #");
+  Serial.printf("     Sat #");
   for (int i=0; i<MAX_SATELLITES; ++i)
     Serial.printf("%02d ", i);
   Serial.println(); Serial.flush();
-  Serial.printf("------------");
+  Serial.printf("----------");
   for (int i=0; i<MAX_SATELLITES; ++i)
     Serial.printf("---");
   Serial.println(); Serial.flush();
@@ -70,10 +70,10 @@ void loop()
       if (linecount++ % 20 == 0)
         Header();
       auto t = gps.Time.Get();
-      Serial.printf("%02d:%02d:%02d.%02d ", t.Hour, t.Minute, t.Second, t.Centisecond);
+      Serial.printf("%02d:%02d:%02d  ", t.Hour, t.Minute, t.Second, t.Centisecond);
       for (int i=0; i<MAX_SATELLITES; ++i)
       {
-        char ch = changed[i] ? '*' : ' ';
+        char ch = changed[i] && linecount != 1 ? '*' : ' ';
         if (elevations[i] == -1)
           Serial.printf("  %c", ch);
         else
