@@ -62,7 +62,7 @@ TinyGPSAsync::TimeItem::Time TinyGPSAsync::TimeItem::Get()
     time.Hour = val / 1000000;
     time.Minute = (val / 10000) % 100;
     time.Second = (val / 100) % 100;
-    time.CentiSecond = val % 100;
+    time.Centisecond = val % 100;
     isNew = false;
     return time;
 }

@@ -20,11 +20,10 @@ void setup()
   GPS1Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX1_PIN, GPS_TX1_PIN);
   GPS2Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX2_PIN, GPS_TX2_PIN);
 
-  delay(1500); // Allow ESP32 serial to initialize
+  delay(2000); // Allow ESP32 serial to initialize
 
   Serial.println("MultipleGPS.ino");
   Serial.println("Demonstrates reading from 2 GPS modules at once");
-  Serial.println("by Mikal Hart");
   Serial.println();
 
   gps1.begin(GPS1Serial);

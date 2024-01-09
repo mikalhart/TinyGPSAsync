@@ -160,7 +160,7 @@ public:
             uint8_t Hour = 0;
             uint8_t Minute = 0;
             uint8_t Second = 0;
-            uint8_t CentiSecond = 0;
+            uint8_t Centisecond = 0;
         };
         Time Get();
     };

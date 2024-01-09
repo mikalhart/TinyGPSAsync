@@ -14,11 +14,10 @@ void setup()
   Serial.begin(115200);
   GPSSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
 
-  delay(1500); // Allow ESP32 serial to initialize
+  delay(2000); // Allow ESP32 serial to initialize
 
   Serial.println("Sentences.ino");
   Serial.println("Looking at raw NMEA sentences");
-  Serial.println("by Mikal Hart");
   Serial.println();
 
   gps.begin(GPSSerial);
