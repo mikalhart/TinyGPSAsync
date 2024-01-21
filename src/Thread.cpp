@@ -84,7 +84,7 @@ void TinyGPSAsync::TaskSpecific::gpsTask(void *pvParameters)
 
     while (pThis->taskActive)
     {
-        while (pThis->stream->available() && pThis->NewSentences.size() <= 5)
+        while (pThis->stream->available() && pThis->NewSentences.size() <= 1)
         {
             char c = pThis->stream->read();
             ++pThis->Counters.encodedCharCount;
@@ -101,6 +101,7 @@ void TinyGPSAsync::TaskSpecific::gpsTask(void *pvParameters)
                     index = 0;
             }
         }
+        delay(1); // to avoid killing Idle thread watchdog
         if (pThis->NewSentences.size() > 0)
             pThis->processNewSentences();
     }
