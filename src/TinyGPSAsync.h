@@ -51,7 +51,7 @@ public:
         string operator[](int field)    { return field >= fields.size() ? "" : fields[field]; }
         uint8_t CharCount()             { return charCount; }
 
-        static ParsedSentence FromString(string str);
+        static ParsedSentence FromString(const string &str);
         string Get();
     };
 
@@ -259,7 +259,7 @@ public:
         StatisticsCounters Counters;
 
     public:
-        enum {OK = 0, STREAM, WIRING, BAUD, OVERFLOW, FIX, WAIT, MISSING };
+        enum {OK = 0, STREAM, WIRING, BAUD, OVERFLOW, MISSING };
         StatisticsCounters Get() { process(); isNew = false; return Counters; }
         int Status();
         string StatusString(int status);
@@ -294,21 +294,19 @@ public:
 
             /* Internal items (not guarded) */
             volatile bool hasNewSentence = false;
-            vector<string> NewSentences;
             vector<TinyGPSAsync::SatelliteItem::SatInfo> SatelliteBuffer;
             Stream *stream = nullptr;
             SemaphoreHandle_t gpsMutex = xSemaphoreCreateMutex();
 
 
             volatile bool taskActive = false;
-            void processNewSentences();
+            void processNewSentence(string &s);
             static void gpsTask(void *pvParameters);
 
             void Clear()
             {
                 Counters.Clear();
                 AllSentences.clear();
-                NewSentences.clear();
                 AllSatellites.clear();
             }
         } task;

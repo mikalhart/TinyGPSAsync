@@ -28,7 +28,7 @@ void loop()
   if (gps.Time.IsNew())
   {
     auto t = gps.Time.Get();
-    Serial.printf("%02d:%02d:%02d ", t.Hour, t.Minute, t.Second);
+    Serial.printf("%02d:%02d:%02d.%02d ", t.Hour, t.Minute, t.Second, t.Centisecond);
     if (gps.Date.EverUpdated())
     {
         auto d = gps.Date.Get();

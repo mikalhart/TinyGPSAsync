@@ -80,7 +80,7 @@ TinyGPSAsync::DateItem::Date TinyGPSAsync::DateItem::Get()
 
 
 /* static */
-TinyGPSAsync::ParsedSentence TinyGPSAsync::ParsedSentence::FromString(string str)
+TinyGPSAsync::ParsedSentence TinyGPSAsync::ParsedSentence::FromString(const string &str)
 {
     ParsedSentence s;
     s.lastUpdateTime = millis();
@@ -350,19 +350,17 @@ int TinyGPSAsync::DiagnosticItem::Status()
     process();
     if (pThis->task.stream == nullptr)
         return STREAM;
-    if (millis() - pThis->startTime < 10000)
-        return WAIT;
-    if (Counters.encodedCharCount < 10)
-        return WIRING;
-    if (Counters.invalidSentenceCount > 3 || Counters.validSentenceCount == 0)
-        return BAUD;
+    if (millis() - pThis->startTime >= 5000)
+    {
+        if (Counters.encodedCharCount < 10)
+            return WIRING;
+        if (Counters.invalidSentenceCount > 3 || Counters.validSentenceCount == 0)
+            return BAUD;
+        if (Counters.ggaCount < 5 || Counters.rmcCount < 5)
+            return MISSING;
+    }
     if (Counters.failedChecksumCount > 3)
         return OVERFLOW;
-    if (!pThis->FixStatus.IsPositionValid())
-        return FIX;
-    if (Counters.ggaCount < 5 || Counters.rmcCount < 5)
-        return MISSING;
-
     return OK;
 }
 
@@ -372,18 +370,16 @@ string TinyGPSAsync::DiagnosticItem::StatusString(int status)
     {
         case STREAM:
             return "Parser not started";
-        case WAIT:
-            return "Status not yet available";
         case WIRING:
             return "Possible wiring issue";
         case BAUD:
             return "Possible baud rate mismatch";
         case OVERFLOW:
             return "Characters dropping";
-        case FIX:
-            return "No position fix yet";
         case MISSING:
             return "GGA or RMC not available";
+        case OK:
+            return "Ok";
     }
-    return "Ok";
+    return "Unknown";
 }

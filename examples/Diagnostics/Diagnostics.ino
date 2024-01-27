@@ -16,6 +16,10 @@ void setup()
 
   delay(2000); // Allow ESP32 serial to initialize
 
+vector<uint8_t> Navrate10hz = {0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0x64, 0x00, 0x01, 0x00, 0x01, 0x00, 0x7A, 0x12};
+for (auto c : Navrate10hz)
+  GPSSerial.write(c);
+
   Serial.println("Diagnostics.ino");
   Serial.println("Quick troubleshooting in TinyGPSAsync");
   Serial.println();
@@ -28,9 +32,9 @@ void loop()
   int status = gps.Diagnostic.Status();
   string statusString = gps.Diagnostic.StatusString(status);
   auto counters = gps.Diagnostic.Get();
-  Serial.printf("Characters Rx = %d, Sentences Valid/Invalid = %d/%d, Chksum pass/fail = %d/%d, Status = '%s' (%d)\n",
+  Serial.printf("Characters Rx = %d  Sentences Valid/Invalid = %d/%d  Chksum pass/fail = %d/%d  Position Fix? %c  Status = '%s' (%d)\n",
     counters.encodedCharCount, counters.validSentenceCount, counters.invalidSentenceCount, counters.passedChecksumCount, counters.failedChecksumCount,
-    statusString.c_str(), status);
+    gps.FixStatus.IsPositionValid() ? 'y' : 'n', statusString.c_str(), status);
 
   delay(1000);
 }
