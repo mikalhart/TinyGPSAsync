@@ -137,7 +137,7 @@ public:
             uint8_t Day = 0;
         };
     private:
-        uint32_t d;
+        uint32_t d = 0;
         void parse(const char *term) { d = atol(term); }
     public:
         Date Get();
@@ -147,7 +147,7 @@ public:
     {
         friend class TinyGPSAsync;
     protected:
-        int32_t val;
+        int32_t val = 0;
         void parse(const char *term);
     };
 
