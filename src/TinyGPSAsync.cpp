@@ -2,7 +2,7 @@
 
 // static
 // Parse degrees in that funny NMEA format DDMM.MMMM
-void TinyGPSAsync::LocationItem::parseDegrees(const char *degTerm, const char *nsewTerm, TinyGPSAsync::LocationItem::Raw::RawD &deg)
+void TinyGPSAsync::Snapshot::LocationItem::parseDegrees(const char *degTerm, const char *nsewTerm, TinyGPSAsync::Snapshot::LocationItem::Raw::RawD &deg)
 {
     uint32_t leftOfDecimal = (uint32_t)atol(degTerm);
     uint16_t minutes = (uint16_t)(leftOfDecimal % 100);
@@ -25,7 +25,7 @@ void TinyGPSAsync::LocationItem::parseDegrees(const char *degTerm, const char *n
     deg.negative = *nsewTerm == 'W' || *nsewTerm == 'S';
 }
 
-void TinyGPSAsync::DecimalItem::parse(const char *term)
+void TinyGPSAsync::Snapshot::DecimalItem::parse(const char *term)
 {
     bool negative = *term == '-';
     if (negative) ++term;
@@ -41,9 +41,8 @@ void TinyGPSAsync::DecimalItem::parse(const char *term)
 }
 
 
-TinyGPSAsync::LocationItem::Dbl TinyGPSAsync::LocationItem::Get()
+TinyGPSAsync::Snapshot::LocationItem::Dbl TinyGPSAsync::Snapshot::LocationItem::Get()
 {
-    process();
     Dbl d;
     d.Lat = r.Lat.deg + r.Lat.billionths / 1000000000.0;
     if (r.Lat.negative)
@@ -55,9 +54,8 @@ TinyGPSAsync::LocationItem::Dbl TinyGPSAsync::LocationItem::Get()
     return d;
 }
 
-TinyGPSAsync::TimeItem::Time TinyGPSAsync::TimeItem::Get() 
+TinyGPSAsync::Snapshot::TimeItem::Time TinyGPSAsync::Snapshot::TimeItem::Get() 
 { 
-    process(); 
     Time time;
     time.Hour = val / 1000000;
     time.Minute = (val / 10000) % 100;
@@ -67,9 +65,8 @@ TinyGPSAsync::TimeItem::Time TinyGPSAsync::TimeItem::Get()
     return time;
 }
 
-TinyGPSAsync::DateItem::Date TinyGPSAsync::DateItem::Get() 
+TinyGPSAsync::Snapshot::DateItem::Date TinyGPSAsync::Snapshot::DateItem::Get() 
 { 
-    process(); 
     Date date;
     date.Year = d % 100 + 2000;
     date.Month = (d / 100) % 100;
@@ -147,7 +144,7 @@ void TinyGPSAsync::processGGA(TinyGPSAsync::ParsedSentence &sentence)
 {
     if (sentence[1].length() > 0)
     {
-        Time.parse(sentence[1].c_str());
+        Snapshot.Time.parse(sentence[1].c_str());
         Time.everUpdated = Time.isNew = true;
         Time.lastUpdateTime = sentence.Timestamp();
     }
