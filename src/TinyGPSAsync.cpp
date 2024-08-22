@@ -1,15 +1,14 @@
 #include "TinyGPSAsync.h"
 
-// static
 // Parse degrees in that funny NMEA format DDMM.MMMM
-void TinyGPSAsync::Snapshot::LocationItem::parseDegrees(const char *degTerm, const char *nsewTerm, TinyGPSAsync::Snapshot::LocationItem::Raw::RawD &deg)
+void TinyGPSAsync::Snapshot::LocationItem::LocationAngle::parseDegrees(const char *degTerm, const char *nsewTerm)
 {
     uint32_t leftOfDecimal = (uint32_t)atol(degTerm);
     uint16_t minutes = (uint16_t)(leftOfDecimal % 100);
     uint32_t multiplier = 10000000UL;
     uint32_t tenMillionthsOfMinutes = minutes * multiplier;
 
-    deg.deg = (int16_t)(leftOfDecimal / 100);
+    this->deg = (int16_t)(leftOfDecimal / 100);
 
     while (isdigit(*degTerm))
         ++degTerm;
@@ -21,8 +20,8 @@ void TinyGPSAsync::Snapshot::LocationItem::parseDegrees(const char *degTerm, con
             tenMillionthsOfMinutes += (*degTerm - '0') * multiplier;
         }
 
-    deg.billionths = (5 * tenMillionthsOfMinutes + 1) / 3;
-    deg.negative = *nsewTerm == 'W' || *nsewTerm == 'S';
+    this->billionths = (5 * tenMillionthsOfMinutes + 1) / 3;
+    this->negative = *nsewTerm == 'W' || *nsewTerm == 'S';
 }
 
 void TinyGPSAsync::Snapshot::DecimalItem::parse(const char *term)
@@ -37,42 +36,7 @@ void TinyGPSAsync::Snapshot::DecimalItem::parse(const char *term)
         if (isdigit(term[2]))
             ret += term[2] - '0';
     }
-    val = negative ? -ret : ret;
-}
-
-
-TinyGPSAsync::Snapshot::LocationItem::Dbl TinyGPSAsync::Snapshot::LocationItem::Get()
-{
-    Dbl d;
-    d.Lat = r.Lat.deg + r.Lat.billionths / 1000000000.0;
-    if (r.Lat.negative)
-        d.Lat = -d.Lat;
-    d.Lng = r.Lng.deg + r.Lng.billionths / 1000000000.0;
-    if (r.Lng.negative)
-        d.Lng = -d.Lng;
-    isNew = false;
-    return d;
-}
-
-TinyGPSAsync::Snapshot::TimeItem::Time TinyGPSAsync::Snapshot::TimeItem::Get() 
-{ 
-    Time time;
-    time.Hour = val / 1000000;
-    time.Minute = (val / 10000) % 100;
-    time.Second = (val / 100) % 100;
-    time.Centisecond = val % 100;
-    isNew = false;
-    return time;
-}
-
-TinyGPSAsync::Snapshot::DateItem::Date TinyGPSAsync::Snapshot::DateItem::Get() 
-{ 
-    Date date;
-    date.Year = d % 100 + 2000;
-    date.Month = (d / 100) % 100;
-    date.Day = d / 10000;
-    isNew = false;
-    return date;
+    v = negative ? -ret : ret;
 }
 
 
@@ -128,7 +92,7 @@ TinyGPSAsync::ParsedSentence TinyGPSAsync::ParsedSentence::FromString(const stri
     return s;
 }
 
-string TinyGPSAsync::ParsedSentence::Get()
+string TinyGPSAsync::ParsedSentence::String() const
 {
     string str;
     for (int i=0; i<fields.size(); ++i)
@@ -144,45 +108,39 @@ void TinyGPSAsync::processGGA(TinyGPSAsync::ParsedSentence &sentence)
 {
     if (sentence[1].length() > 0)
     {
-        Snapshot.Time.parse(sentence[1].c_str());
-        Time.everUpdated = Time.isNew = true;
-        Time.lastUpdateTime = sentence.Timestamp();
+        snapshot.Time.parse(sentence[1].c_str());
+        snapshot.Time.StampIt(sentence.Timestamp());
     }
 
     if (sentence[2].length() > 0 && sentence[4].length() > 0)
     {
-        Location.parseDegrees(sentence[2].c_str(), sentence[3].c_str(), Location.r.Lat);
-        Location.parseDegrees(sentence[4].c_str(), sentence[5].c_str(), Location.r.Lng);
-        Location.everUpdated = Location.isNew = true;
-        Location.lastUpdateTime = sentence.Timestamp();
+        snapshot.Location.RawLat.parseDegrees(sentence[2].c_str(), sentence[3].c_str());
+        snapshot.Location.RawLng.parseDegrees(sentence[4].c_str(), sentence[5].c_str());
+        snapshot.Location.StampIt(sentence.Timestamp());
     }
 
     if (sentence[6].length() > 0)
     {
-        Quality.parse(sentence[6].c_str());
-        Quality.everUpdated = Quality.isNew = true;
-        Quality.lastUpdateTime = sentence.Timestamp();
+        snapshot.Quality.parse(sentence[6].c_str());
+        snapshot.Quality.StampIt(sentence.Timestamp());
     }
 
     if (sentence[7].length() > 0)
     {
-        SatelliteCount.parse(sentence[7].c_str());
-        SatelliteCount.everUpdated = SatelliteCount.isNew = true;
-        SatelliteCount.lastUpdateTime = sentence.Timestamp();
+        snapshot.SatelliteCount.parse(sentence[7].c_str());
+        snapshot.SatelliteCount.StampIt(sentence.Timestamp());
     }
 
     if (sentence[8].length() > 0)
     {
-        HDOP.parse(sentence[8].c_str());
-        HDOP.everUpdated = HDOP.isNew = true;
-        HDOP.lastUpdateTime = sentence.Timestamp();
+        snapshot.HDOP.parse(sentence[8].c_str());
+        snapshot.HDOP.StampIt(sentence.Timestamp());
     }
 
     if (sentence[9].length() > 0)
     {
-        Altitude.parse(sentence[9].c_str());
-        Altitude.everUpdated = Altitude.isNew = true;
-        Altitude.lastUpdateTime = sentence.Timestamp();
+        snapshot.Altitude.parse(sentence[9].c_str());
+        snapshot.Altitude.StampIt(sentence.Timestamp());
     }
 }
 
@@ -190,53 +148,46 @@ void TinyGPSAsync::processRMC(TinyGPSAsync::ParsedSentence &sentence)
 {
     if (sentence[1].length() > 0)
     {
-        Time.parse(sentence[1].c_str());
-        Time.everUpdated = Time.isNew = true;
-        Time.lastUpdateTime = sentence.Timestamp();
+        snapshot.Time.parse(sentence[1].c_str());
+        snapshot.Time.StampIt(sentence.Timestamp());
     }
 
     if (sentence[2].length() > 0)
     {
-        FixStatus.parse(sentence[2].c_str());
-        FixStatus.everUpdated = FixStatus.isNew = true;
-        FixStatus.lastUpdateTime = sentence.Timestamp();
+        snapshot.FixStatus.parse(sentence[2].c_str());
+        snapshot.FixStatus.StampIt(sentence.Timestamp());
     }
 
     if (sentence[3].length() > 0 && sentence[5].length() > 0)
     {
-        Location.parseDegrees(sentence[3].c_str(), sentence[4].c_str(), Location.r.Lat);
-        Location.parseDegrees(sentence[5].c_str(), sentence[6].c_str(), Location.r.Lng);
-        Location.everUpdated = Location.isNew = true;
-        Location.lastUpdateTime = sentence.Timestamp();
+        snapshot.Location.RawLat.parseDegrees(sentence[3].c_str(), sentence[4].c_str());
+        snapshot.Location.RawLng.parseDegrees(sentence[5].c_str(), sentence[6].c_str());
+        snapshot.Location.StampIt(sentence.Timestamp());
     }
 
     if (sentence[7].length() > 0)
     {
-        Speed.parse(sentence[7].c_str());
-        Speed.everUpdated = Speed.isNew = true;
-        Speed.lastUpdateTime = sentence.Timestamp();
+        snapshot.Speed.parse(sentence[7].c_str());
+        snapshot.Speed.StampIt(sentence.Timestamp());
     }
 
     if (sentence[8].length() > 0)
     {
-        Course.parse(sentence[8].c_str());
-        Course.everUpdated = Course.isNew = true;
-        Course.lastUpdateTime = sentence.Timestamp();
+        snapshot.Course.parse(sentence[8].c_str());
+        snapshot.Course.StampIt(sentence.Timestamp());
     }
     
     if (sentence[9].length() > 0)
     {
-        Date.parse(sentence[9].c_str());
-        Date.everUpdated = Date.isNew = true;
-        Date.lastUpdateTime = sentence.Timestamp();
+        snapshot.Date.parse(sentence[9].c_str());
+        snapshot.Date.StampIt(sentence.Timestamp());
     }
 }
 
-void TinyGPSAsync::process()
+void TinyGPSAsync::sync()
 {
-    if (task.hasNewSentence)
+    if (task.hasNewCharacters || task.hasNewSentences)
     {
-        task.hasNewSentence = false;
         std::map<string, ParsedSentence> newSentences;
         uint32_t now = millis();
         log_d("Taking semaphore");
@@ -245,27 +196,22 @@ void TinyGPSAsync::process()
             // Step 1: Copy over any new satellite info from GSV
             if (!task.AllSatellites.empty())
             {
-                Satellites.s = task.AllSatellites;
-                Satellites.isNew = true;
-                Satellites.everUpdated = true;
-                Satellites.lastUpdateTime = now;
+                snapshot.satellites.Sats = task.AllSatellites;
+                snapshot.satellites.Talker = task.SatelliteTalkerId;
             }
 
             // Step 2: Copy over all new sentences
-            this->Sentence.LastSentence = task.LastSentence;
+            snapshot.sentences.LastSentence = task.LastSentence;
             newSentences = task.AllSentences;
 
-            // Step 3: Copy diags
-            Diagnostic.Counters.encodedCharCount += task.Counters.encodedCharCount;
-            Diagnostic.Counters.validSentenceCount += task.Counters.validSentenceCount;
-            Diagnostic.Counters.failedChecksumCount += task.Counters.failedChecksumCount;
-            Diagnostic.Counters.passedChecksumCount += task.Counters.passedChecksumCount;
-            Diagnostic.Counters.invalidSentenceCount += task.Counters.invalidSentenceCount;
-            Diagnostic.Counters.ggaCount += task.Counters.ggaCount;
-            Diagnostic.Counters.rmcCount += task.Counters.rmcCount;
-            Diagnostic.isNew = true;
-            Diagnostic.everUpdated = true;
-            Diagnostic.lastUpdateTime = now;
+            // Step 3: Copy statistics
+            snapshot.statistics.encodedCharCount += task.Counters.encodedCharCount;
+            snapshot.statistics.validSentenceCount += task.Counters.validSentenceCount;
+            snapshot.statistics.failedChecksumCount += task.Counters.failedChecksumCount;
+            snapshot.statistics.passedChecksumCount += task.Counters.passedChecksumCount;
+            snapshot.statistics.invalidSentenceCount += task.Counters.invalidSentenceCount;
+            snapshot.statistics.ggaCount += task.Counters.ggaCount;
+            snapshot.statistics.rmcCount += task.Counters.rmcCount;
 
             task.Clear();
             xSemaphoreGive(task.gpsMutex);
@@ -274,8 +220,7 @@ void TinyGPSAsync::process()
         // Step 4: After the semaphore has been released, process all new sentences
         for (auto kvp : newSentences)
         {
-            Sentence.AllSentences[kvp.first] = kvp.second;
-            Sentence.isNew = true;
+            snapshot.sentences.AllSentences[kvp.first] = kvp.second;
             if (kvp.second.ChecksumValid())
             {
                 if (kvp.first == "GGA")
@@ -285,6 +230,10 @@ void TinyGPSAsync::process()
             }
         }
     }
+    task.hasNewSentences = false;
+    task.hasNewCharacters = false;
+    task.hasNewSatellites = false;
+    task.hasNewSnapshot = false;
 }
 
 /* static */
@@ -342,27 +291,28 @@ double TinyGPSAsync::CourseTo(double lat1, double long1, double lat2, double lon
   return degrees(a2);
 }
 
-int TinyGPSAsync::DiagnosticItem::Status()
+TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
 {
-    process();
-    if (pThis->task.stream == nullptr)
+    if (task.stream == nullptr)
         return STREAM;
-    if (millis() - pThis->startTime >= 5000)
+    auto stats = GetStatistics();
+    if (millis() - startTime >= 5000)
     {
-        if (Counters.encodedCharCount < 10)
+        if (stats.encodedCharCount < 10)
             return WIRING;
-        if (Counters.invalidSentenceCount > 3 || Counters.validSentenceCount == 0)
+        if (stats.invalidSentenceCount > 3 || stats.validSentenceCount == 0)
             return BAUD;
-        if (Counters.ggaCount < 5 || Counters.rmcCount < 5)
+        if (stats.ggaCount < 5 || stats.rmcCount < 5)
             return MISSING;
     }
-    if (Counters.failedChecksumCount > 3)
+    if (stats.failedChecksumCount > 3)
         return OVERFLOW;
     return OK;
 }
 
-string TinyGPSAsync::DiagnosticItem::StatusString(int status)
+string TinyGPSAsync::DiagnosticString()
 {
+    Status status = DiagnosticCode();
     switch(status)
     {
         case STREAM:

@@ -1,6 +1,16 @@
 #include "TinyGPSAsync.h"
 #include "esp_task_wdt.h"
 
+void TinyGPSAsync::TaskSpecific::processGarbageCharacters(int count)
+{
+    if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
+    {
+        Counters.encodedCharCount += count;
+        hasNewCharacters = true;
+        xSemaphoreGive(gpsMutex);
+    }
+}
+
 void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
 {
     ParsedSentence ps = ParsedSentence::FromString(s);
@@ -8,6 +18,7 @@ void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
     {
         Counters.encodedCharCount += s.length();
+        hasNewCharacters = true;
         if (ps.IsValid())
         {
             ++Counters.validSentenceCount;
@@ -19,14 +30,20 @@ void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
             if (id != "")
             {
                 LastSentence = AllSentences[id] = ps;
-                hasNewSentence = true;
+                hasNewSentences = true;
             }
 
             if (id == "RMC")
+            {
                 ++Counters.rmcCount;
+                hasNewSnapshot = true;
+            }
             
             if (id == "GGA")
+            {
                 ++Counters.ggaCount;
+                hasNewSnapshot = true;
+            }
 
             if (id == "GSV" && ps.ChecksumValid())
             {
@@ -34,9 +51,9 @@ void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
                 uint16_t msgNo = (uint16_t)strtoul(ps[2].c_str(), NULL, 10);
                 uint16_t svsInView = (uint16_t)strtoul(ps[3].c_str(), NULL, 10);
                 log_d("GSV: count: %d no: %d in view: %d", msgCount, msgNo, svsInView);
-                for (int i=0; i<4 && 4 * (msgNo - 1) + i < svsInView; ++i)
+                for (int i = 0; i < 4 && 4 * (msgNo - 1) + i < svsInView; ++i)
                 {
-                    TinyGPSAsync::SatelliteItem::SatInfo sat;
+                    SatInfo sat;
                     sat.prn = (uint16_t)strtoul(ps[4 + 4 * i].c_str(), NULL, 10);
                     sat.elevation = (uint16_t)strtoul(ps[5 + 4 * i].c_str(), NULL, 10);
                     sat.azimuth = (uint16_t)strtoul(ps[6 + 4 * i].c_str(), NULL, 10);
@@ -47,7 +64,9 @@ void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
                 if (msgNo == msgCount)
                 {
                     AllSatellites = SatelliteBuffer;
+                    SatelliteTalkerId = ps.TalkerId();
                     SatelliteBuffer.clear();
+                    hasNewSatellites = true;
                 }
             }
         }
@@ -85,7 +104,10 @@ void TinyGPSAsync::TaskSpecific::gpsTask(void *pvParameters)
             {
                 buf[index++] = c;
                 if (index == sizeof(buf) - 1) // discard?
+                {
+                    pThis->processGarbageCharacters(index);
                     index = 0;
+                }
             }
         }
         delay(1); // to avoid killing Idle thread watchdog

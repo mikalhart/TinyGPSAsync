@@ -27,7 +27,8 @@ void setup()
 // the commonly used GSA sentence
 void loop()
 {
-  auto &gsa = gps.Sentence["GSA"];
+  auto s = gps.GetSentences();
+  auto &gsa = s["GSA"];
   static string oldvdop;
   static int oldstatus = -1;
   string vdop;
@@ -45,7 +46,7 @@ void loop()
     }
   }
 
-  status = gps.Diagnostic.Status();
+  status = gps.DiagnosticCode();
   if (status != oldstatus)
   {
     oldstatus = status;
@@ -55,6 +56,6 @@ void loop()
   if (changed)
   {
     Serial.printf("VDOP: %s Status: %s\n", 
-      oldvdop.empty() ? "Unknown" : oldvdop.c_str(), gps.Diagnostic.StatusString(oldstatus).c_str());
+      oldvdop.empty() ? "Unknown" : oldvdop.c_str(), gps.DiagnosticString().c_str());
   }
 }

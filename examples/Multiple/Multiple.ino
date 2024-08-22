@@ -12,7 +12,7 @@ TinyGPSAsync gps2;
 
 #define GPS_BAUD 9600
 #define GPS1Serial Serial1
-#define GPS2Serial Serial2
+#define GPS2Serial Serial1 // ***
 
 void setup()
 {
@@ -33,16 +33,18 @@ void setup()
 // Displays the time and date from each GPS and (randomly) the latest RMC sentence
 void loop()
 {
-  if (gps1.Time.IsNew() || gps2.Time.IsNew())
+  auto & ss1 = gps1.GetSnapshot();
+  auto & ss2 = gps2.GetSnapshot();
+  if (ss1.Time.IsNew() || ss2.Time.IsNew())
   {
-    auto t1 = gps1.Time.Get();
-    auto t2 = gps2.Time.Get();
-    auto d1 = gps1.Date.Get();
-    auto d2 = gps2.Date.Get();
-    Serial.printf("GPS1: %02d:%02d:%02d %02d-%02d-%04d status=%d ", t1.Hour, t1.Minute, t1.Second, d1.Day, d1.Month, d1.Year, gps1.Diagnostic.Status());
-    Serial.printf("GPS2: %02d:%02d:%02d %02d-%02d-%04d status=%d\n", t2.Hour, t2.Minute, t2.Second, d2.Day, d2.Month, d2.Year, gps2.Diagnostic.Status());
-    auto s1 = gps1.Sentence.Get("RMC");
-    auto s2 = gps1.Sentence.Get("RMC");
+    auto t1 = ss1.Time;
+    auto t2 = ss2.Time;
+    auto d1 = ss1.Date;
+    auto d2 = ss2.Date;
+    Serial.printf("GPS1: %02d:%02d:%02d %02d-%02d-%04d status=%d ", t1.Hour(), t1.Minute(), t1.Second(), d1.Day(), d1.Month(), d1.Year(), gps1.DiagnosticCode());
+    Serial.printf("GPS2: %02d:%02d:%02d %02d-%02d-%04d status=%d\n", t2.Hour(), t2.Minute(), t2.Second(), d2.Day(), d2.Month(), d2.Year(), gps2.DiagnosticCode());
+    auto & s1 = ss1.sentences["RMC"];
+    auto & s2 = ss2.sentences["RMC"];
     Serial.printf("%s='%s' ", s1[0].c_str(), s1[1].c_str());
     Serial.printf("%s='%s'\n", s2[0].c_str(), s2[1].c_str());
   }

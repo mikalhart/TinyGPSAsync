@@ -1,17 +1,22 @@
 #include <Arduino.h>
 #include <TinyGPSAsync.h>
+#include <map>
 
 TinyGPSAsync gps;
 
 /* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN 2
-#define GPS_TX_PIN 3
+#define GPS_RX_PIN D0
+#define GPS_TX_PIN D1
 #define GPS_BAUD 9600
 #define GPSSerial Serial1
 
-static const int MAX_SATELLITES = 40;
-int elevations[MAX_SATELLITES];
-bool changed[MAX_SATELLITES];
+static const int MAX_SATELLITES = 60;
+struct satelevinfo
+{
+  bool changed = false;
+  int elev = -1;
+};
+std::map<string, vector<satelevinfo>> data;
 
 void setup()
 {
@@ -27,22 +32,22 @@ void setup()
   gps.begin(GPSSerial);
 }
 
-int ElevFromSat(std::vector<TinyGPSAsync::SatelliteItem::SatInfo> &sats, int satno)
+int ElevFromSat(const TinyGPSAsync::Satellites &sats, int satno)
 {
-  for (int i=0; i<sats.size(); ++i)
-    if (sats[i].prn == satno)
-      return (int)sats[i].elevation;
+  for (int i=0; i<sats.Sats.size(); ++i)
+    if (sats.Sats[i].prn == satno)
+      return (int)sats.Sats[i].elevation;
   return -1;
 }
 
 void Header()
 {
   Serial.println();
-  Serial.printf("     Sat #");
+  Serial.printf("         Id Sat #");
   for (int i=0; i<MAX_SATELLITES; ++i)
     Serial.printf("%02d ", i);
   Serial.println(); Serial.flush();
-  Serial.printf("----------");
+  Serial.printf("-----------------");
   for (int i=0; i<MAX_SATELLITES; ++i)
     Serial.printf("---");
   Serial.println(); Serial.flush();
@@ -50,37 +55,41 @@ void Header()
 
 void loop()
 {
-  if (gps.Satellites.IsNew())
+  static int linecount = 0;
+  bool chg = false;
+  auto & sats = gps.GetSatellites();
+  if (data.find(sats.Talker) == data.end())
   {
-    static int linecount = 0;
-    bool chg = false;
-    auto sats = gps.Satellites.Get();
+    data[sats.Talker] = vector<satelevinfo>(MAX_SATELLITES);
+  }
+
+  for (int i=0; i<MAX_SATELLITES; ++i)
+  {
+    int elev = ElevFromSat(sats, i);
+    auto & thisSat = data[sats.Talker][i];
+    if (elev != thisSat.elev)
+    {
+      thisSat.changed = chg = true;
+      thisSat.elev = elev;
+    }
+  }
+  
+  if (chg)
+  {
+    if (linecount++ % 20 == 0)
+      Header();
+    auto t = gps.GetSnapshot().Time;
+    Serial.printf("%02d:%02d:%02d %2s      ", t.Hour(), t.Minute(), t.Second(), sats.Talker.c_str());
     for (int i=0; i<MAX_SATELLITES; ++i)
     {
-      int elev = ElevFromSat(sats, i);
-      if (elev != elevations[i])
-      {
-        changed[i] = chg = true;
-        elevations[i] = elev;
-      }
+      auto & thisSat = data[sats.Talker][i];
+      char ch = thisSat.changed && linecount != 1 ? '*' : ' ';
+      if (thisSat.elev == -1)
+        Serial.printf("  %c", ch);
+      else
+        Serial.printf("%02d%c", thisSat.elev, ch);
+      thisSat.changed = false;
     }
-    
-    if (chg)
-    {
-      if (linecount++ % 20 == 0)
-        Header();
-      auto t = gps.Time.Get();
-      Serial.printf("%02d:%02d:%02d  ", t.Hour, t.Minute, t.Second, t.Centisecond);
-      for (int i=0; i<MAX_SATELLITES; ++i)
-      {
-        char ch = changed[i] && linecount != 1 ? '*' : ' ';
-        if (elevations[i] == -1)
-          Serial.printf("  %c", ch);
-        else
-          Serial.printf("%02d%c", elevations[i], ch);
-        changed[i] = false;
-      }
-      Serial.println();
-    }
+    Serial.println();
   }
 }

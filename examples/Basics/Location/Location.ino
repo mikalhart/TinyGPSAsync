@@ -4,8 +4,8 @@
 TinyGPSAsync gps;
 
 /* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN 2
-#define GPS_TX_PIN 3
+#define GPS_RX_PIN D0
+#define GPS_TX_PIN D1
 #define GPS_BAUD 9600
 #define GPSSerial Serial1
 
@@ -25,16 +25,20 @@ void setup()
 
 void loop()
 {
-  if (gps.Location.IsNew())
+  if (gps.NewSentenceAvailable())
   {
-    auto l = gps.Location.Get();
-    Serial.printf("New location: (%f, %f)\n", l.Lat, l.Lng);
+    auto &ss = gps.GetSnapshot();
+    auto &st = ss.sentences;
+    bool locnew = ss.Location.IsNew();
+    bool timenew = ss.Time.IsNew();
+    if (locnew || timenew)
+      Serial.printf("%c(%f, %f) %c%02d:%02d:%02d %s\n", locnew ? '*' : ' ', ss.Location.Lat(), ss.Location.Lng(), timenew ? '*' : ' ', ss.Time.Hour(), ss.Time.Minute(), ss.Time.Second(), st.LastSentence.String().c_str());
   }
 
-  int parserStatus = gps.Diagnostic.Status();
+  int parserStatus = gps.DiagnosticCode();
   if (parserStatus != 0)
   {
-    Serial.printf("Diagnostic: %s\n", gps.Diagnostic.StatusString(parserStatus).c_str());
+    Serial.printf("Diagnostic: %s\n", gps.DiagnosticString().c_str());
     delay(1000);
   }
 }
