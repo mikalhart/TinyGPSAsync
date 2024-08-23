@@ -1,7 +1,7 @@
 #include "TinyGPSAsync.h"
 
 // Parse degrees in that funny NMEA format DDMM.MMMM
-void TinyGPSAsync::Snapshot::LocationItem::LocationAngle::parseDegrees(const char *degTerm, const char *nsewTerm)
+void Snapshot::LocationItem::LocationAngle::parseDegrees(const char *degTerm, const char *nsewTerm)
 {
     uint32_t leftOfDecimal = (uint32_t)atol(degTerm);
     uint16_t minutes = (uint16_t)(leftOfDecimal % 100);
@@ -24,7 +24,7 @@ void TinyGPSAsync::Snapshot::LocationItem::LocationAngle::parseDegrees(const cha
     this->negative = *nsewTerm == 'W' || *nsewTerm == 'S';
 }
 
-void TinyGPSAsync::Snapshot::DecimalItem::parse(const char *term)
+void Snapshot::DecimalItem::parse(const char *term)
 {
     bool negative = *term == '-';
     if (negative) ++term;
@@ -41,7 +41,7 @@ void TinyGPSAsync::Snapshot::DecimalItem::parse(const char *term)
 
 
 /* static */
-TinyGPSAsync::ParsedSentence TinyGPSAsync::ParsedSentence::FromString(const string &str)
+ParsedSentence ParsedSentence::FromString(const string &str)
 {
     ParsedSentence s;
     s.lastUpdateTime = millis();
@@ -92,7 +92,7 @@ TinyGPSAsync::ParsedSentence TinyGPSAsync::ParsedSentence::FromString(const stri
     return s;
 }
 
-string TinyGPSAsync::ParsedSentence::String() const
+string ParsedSentence::String() const
 {
     string str;
     for (int i=0; i<fields.size(); ++i)
@@ -104,7 +104,7 @@ string TinyGPSAsync::ParsedSentence::String() const
     return str;
 }
 
-void TinyGPSAsync::processGGA(TinyGPSAsync::ParsedSentence &sentence)
+void TinyGPSAsync::processGGA(ParsedSentence &sentence)
 {
     if (sentence[1].length() > 0)
     {
@@ -144,7 +144,7 @@ void TinyGPSAsync::processGGA(TinyGPSAsync::ParsedSentence &sentence)
     }
 }
 
-void TinyGPSAsync::processRMC(TinyGPSAsync::ParsedSentence &sentence)
+void TinyGPSAsync::processRMC(ParsedSentence &sentence)
 {
     if (sentence[1].length() > 0)
     {
@@ -267,7 +267,7 @@ double TinyGPSAsync::DistanceBetween(double lat1, double long1, double lat2, dou
   delta = sqrt(delta);
   double denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
   delta = atan2(delta, denom);
-  return delta * _GPS_EARTH_RADIUS;
+  return delta * Snapshot::_GPS_EARTH_RADIUS;
 }
 
 /* static */

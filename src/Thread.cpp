@@ -1,7 +1,7 @@
 #include "TinyGPSAsync.h"
 #include "esp_task_wdt.h"
 
-void TinyGPSAsync::TaskSpecific::processGarbageCharacters(int count)
+void TaskSpecific::processGarbageCharacters(int count)
 {
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
     {
@@ -11,7 +11,7 @@ void TinyGPSAsync::TaskSpecific::processGarbageCharacters(int count)
     }
 }
 
-void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
+void TaskSpecific::processNewSentence(string &s)
 {
     ParsedSentence ps = ParsedSentence::FromString(s);
 
@@ -79,9 +79,9 @@ void TinyGPSAsync::TaskSpecific::processNewSentence(string &s)
     }
 }
 
-void TinyGPSAsync::TaskSpecific::gpsTask(void *pvParameters)
+void TaskSpecific::gpsTask(void *pvParameters)
 {
-    TinyGPSAsync::TaskSpecific *pThis = (TinyGPSAsync::TaskSpecific *)pvParameters;
+    TaskSpecific *pThis = (TaskSpecific *)pvParameters;
     log_d("gpsTask started");
 
     char buf[200];

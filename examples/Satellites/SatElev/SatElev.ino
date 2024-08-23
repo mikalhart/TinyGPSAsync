@@ -32,7 +32,7 @@ void setup()
   gps.begin(GPSSerial);
 }
 
-int ElevFromSat(const TinyGPSAsync::Satellites &sats, int satno)
+int ElevFromSat(const Satellites &sats, int satno)
 {
   for (int i=0; i<sats.Sats.size(); ++i)
     if (sats.Sats[i].prn == satno)
