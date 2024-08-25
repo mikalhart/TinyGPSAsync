@@ -92,7 +92,6 @@ void TaskSpecific::gpsTask(void *pvParameters)
         while (pThis->stream->available())
         {
             char c = pThis->stream->read();
-            ++pThis->Counters.encodedCharCount;
             if (c == '\r')
             {
                 buf[index] = 0;

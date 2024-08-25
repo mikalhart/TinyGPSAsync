@@ -212,7 +212,6 @@ void TinyGPSAsync::sync()
             snapshot.statistics.invalidSentenceCount += task.Counters.invalidSentenceCount;
             snapshot.statistics.ggaCount += task.Counters.ggaCount;
             snapshot.statistics.rmcCount += task.Counters.rmcCount;
-
             task.Clear();
             xSemaphoreGive(task.gpsMutex);
         }
@@ -293,16 +292,16 @@ double TinyGPSAsync::CourseTo(double lat1, double long1, double lat2, double lon
 
 TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
 {
-    if (task.stream == nullptr)
+    if (task.GetStream() == nullptr)
         return STREAM;
-    auto stats = GetStatistics();
+    auto & stats = GetStatistics();
     if (millis() - startTime >= 5000)
     {
         if (stats.encodedCharCount < 10)
             return WIRING;
         if (stats.invalidSentenceCount > 3 || stats.validSentenceCount == 0)
             return BAUD;
-        if (stats.ggaCount < 5 || stats.rmcCount < 5)
+        if (stats.ggaCount < 5 && stats.rmcCount < 5)
             return MISSING;
     }
     if (stats.failedChecksumCount > 3)

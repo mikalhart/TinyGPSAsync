@@ -55,8 +55,45 @@ void Header()
 
 void loop()
 {
+#if true
+static string lastid = "";
+static string lastno = "";
+  if (gps.NewSentenceAvailable())
+  {
+    auto &sent = gps.GetSentences();
+    Serial.printf("%s%s\n", sent.LastSentence.SentenceId() == "GSV" ? "---" : "   ", sent.LastSentence.String().c_str());
+    if (sent.LastSentence.SentenceId() == "GSV")
+    {
+      bool printit = false;
+      string id = sent.LastSentence.TalkerId();
+      string index = sent.LastSentence[2];
+
+      if (lastid == "BD")
+        printit = (id != "GP" || index != "1") && (id != "BD" || index != "1");
+      else if (lastid == "GP")
+        printit = (lastno == "1" && index != "2") || (lastno == "2" && index != "3") || (lastno == "3" && (id != "BD" || index != "1"));
+      else
+        printit = true;
+      if (printit)
+      {
+        Serial.printf("**********Last = %s/%s\n", lastid.c_str(), lastno.c_str());
+        Serial.printf("**********%s: %s/%s\n\n", id.c_str(), sent.LastSentence[2].c_str(), sent.LastSentence[1].c_str());
+      }
+      lastid = id;
+      lastno = index;
+    }
+#else
+  if (!gps.NewSatellitesAvailable())
+    return;
+#endif
+  }
+  return;
+
+
+
   static int linecount = 0;
   bool chg = false;
+  bool newsent = gps.NewSentenceAvailable();
   auto & sats = gps.GetSatellites();
   if (data.find(sats.Talker) == data.end())
   {
@@ -74,11 +111,12 @@ void loop()
     }
   }
   
+  auto &ss = gps.GetSnapshot();
   if (chg)
   {
     if (linecount++ % 20 == 0)
       Header();
-    auto t = gps.GetSnapshot().Time;
+    auto t = ss.Time;
     Serial.printf("%02d:%02d:%02d %2s      ", t.Hour(), t.Minute(), t.Second(), sats.Talker.c_str());
     for (int i=0; i<MAX_SATELLITES; ++i)
     {
@@ -90,6 +128,24 @@ void loop()
         Serial.printf("%02d%c", thisSat.elev, ch);
       thisSat.changed = false;
     }
+#if false
+    auto &counters = ss.statistics;
+    auto status = gps.DiagnosticCode();
+    auto statusString = gps.DiagnosticString();
+    Serial.printf("CRx = %d  Snt Val/Inv = %d/%d  Chk p/f = %d/%d  Fix? %c  Status = '%s' (%d)",
+      counters.encodedCharCount, counters.validSentenceCount, counters.invalidSentenceCount, counters.passedChecksumCount, counters.failedChecksumCount,
+      ss.FixStatus.IsPositionValid() ? 'y' : 'n', statusString.c_str(), status);
+#endif
     Serial.println();
   }
+
+#if false
+  if (newsent)
+  {
+    auto &sent = ss.sentences;
+    for (auto s : sent.AllSentences)
+      if (s.second.SentenceId() == "GSV")
+        Serial.println(s.second.String().c_str());
+  }
+#endif
 }

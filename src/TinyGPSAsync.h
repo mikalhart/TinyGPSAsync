@@ -41,25 +41,13 @@ private:
 public:
     void end()
     {
-        if (task.taskActive)
-        {
-            task.taskActive = false;
-            vTaskDelay(500);
-            task.stream = nullptr;
-        }
+        task.end();
     }
 
     bool begin(Stream &stream)
     {
-        end();
-        task.stream = &stream;
-        task.Clear();
-        task.taskActive = true;
         startTime = millis();
-
-        xTaskCreatePinnedToCore(task.gpsTask, "gpsTask", 10000, &task, /* tskIDLE_PRIORITY */ uxTaskPriorityGet(NULL), NULL, 0);
-
-        return true;
+        return task.begin(stream);
     }
 
     static const char *Cardinal(double course);
