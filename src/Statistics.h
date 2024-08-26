@@ -8,7 +8,7 @@ struct Statistics
     uint32_t ggaCount = 0;
     uint32_t rmcCount = 0;
 
-    void Clear()
+    void clear()
     {
         encodedCharCount = validSentenceCount = invalidSentenceCount = failedChecksumCount =
             passedChecksumCount = ggaCount = rmcCount = 0;

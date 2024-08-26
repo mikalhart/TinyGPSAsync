@@ -184,42 +184,91 @@ void TinyGPSAsync::processRMC(ParsedSentence &sentence)
     }
 }
 
-void TinyGPSAsync::sync()
+void TinyGPSAsync::syncStatistics()
 {
-    if (task.hasNewCharacters || task.hasNewSentences)
+    if (task.hasNewCharacters)
     {
-        std::map<string, ParsedSentence> newSentences;
-        uint32_t now = millis();
         log_d("Taking semaphore");
         if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
         {
-            // Step 1: Copy over any new satellite info from GSV
+            // Copy statistics
+            statistics.encodedCharCount += task.Counters.encodedCharCount;
+            statistics.validSentenceCount += task.Counters.validSentenceCount;
+            statistics.failedChecksumCount += task.Counters.failedChecksumCount;
+            statistics.passedChecksumCount += task.Counters.passedChecksumCount;
+            statistics.invalidSentenceCount += task.Counters.invalidSentenceCount;
+            statistics.ggaCount += task.Counters.ggaCount;
+            statistics.rmcCount += task.Counters.rmcCount;
+            task.Counters.clear();
+            xSemaphoreGive(task.gpsMutex);
+        }
+        task.hasNewCharacters = false;
+    }
+}
+
+void TinyGPSAsync::syncSatellites()
+{
+    if (task.hasNewSatellites)
+    {
+        log_d("Taking semaphore");
+        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
+        {
+            // Copy over any new satellite info from GSV
             if (!task.AllSatellites.empty())
             {
-                snapshot.satellites.Sats = task.AllSatellites;
-                snapshot.satellites.Talker = task.SatelliteTalkerId;
+                satellites.Sats = task.AllSatellites;
+                satellites.Talker = task.SatelliteTalkerId;
             }
 
-            // Step 2: Copy over all new sentences
-            snapshot.sentences.LastSentence = task.LastSentence;
-            newSentences = task.AllSentences;
+            task.AllSatellites.clear();
+            xSemaphoreGive(task.gpsMutex);
+        }
+        task.hasNewSatellites = false;
+    }
+}
 
-            // Step 3: Copy statistics
-            snapshot.statistics.encodedCharCount += task.Counters.encodedCharCount;
-            snapshot.statistics.validSentenceCount += task.Counters.validSentenceCount;
-            snapshot.statistics.failedChecksumCount += task.Counters.failedChecksumCount;
-            snapshot.statistics.passedChecksumCount += task.Counters.passedChecksumCount;
-            snapshot.statistics.invalidSentenceCount += task.Counters.invalidSentenceCount;
-            snapshot.statistics.ggaCount += task.Counters.ggaCount;
-            snapshot.statistics.rmcCount += task.Counters.rmcCount;
-            task.Clear();
+void TinyGPSAsync::syncSentences()
+{
+    if (task.hasNewSentences)
+    {
+        std::map<string, ParsedSentence> newSentences;
+        log_d("Taking semaphore");
+        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
+        {
+            // Copy over all new sentences
+            sentences.LastSentence = task.LastSentence;
+            newSentences = task.NewSentences;
+
+            task.NewSentences.clear();
             xSemaphoreGive(task.gpsMutex);
         }
 
         // Step 4: After the semaphore has been released, process all new sentences
         for (auto kvp : newSentences)
         {
-            snapshot.sentences.AllSentences[kvp.first] = kvp.second;
+            sentences.AllSentences[kvp.first] = kvp.second;
+        }
+        task.hasNewSentences = false;
+    }
+}
+
+void TinyGPSAsync::syncSnapshot()
+{
+    if (task.hasNewSnapshot)
+    {
+        std::map<string, ParsedSentence> newSentences;
+        log_d("Taking semaphore");
+        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
+        {
+            // Step 2: Copy over all new sentences
+            newSentences = task.SnapshotSentences;
+            task.SnapshotSentences.clear();
+            xSemaphoreGive(task.gpsMutex);
+        }
+
+        // Step 4: After the semaphore has been released, process all new sentences
+        for (auto kvp : newSentences)
+        {
             if (kvp.second.ChecksumValid())
             {
                 if (kvp.first == "GGA")
@@ -228,11 +277,8 @@ void TinyGPSAsync::sync()
                     processRMC(kvp.second);
             }
         }
+        task.hasNewSnapshot = false;
     }
-    task.hasNewSentences = false;
-    task.hasNewCharacters = false;
-    task.hasNewSatellites = false;
-    task.hasNewSnapshot = false;
 }
 
 /* static */

@@ -12,7 +12,7 @@ TinyGPSAsync gps2;
 
 #define GPS_BAUD 9600
 #define GPS1Serial Serial1
-#define GPS2Serial Serial1 // ***
+#define GPS2Serial Serial2
 
 void setup()
 {

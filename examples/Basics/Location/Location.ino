@@ -25,10 +25,10 @@ void setup()
 
 void loop()
 {
-  if (gps.NewSentenceAvailable())
+  if (gps.NewSnapshotAvailable())
   {
     auto &ss = gps.GetSnapshot();
-    auto &st = ss.sentences;
+    auto &st = gps.GetSentences();
     bool locnew = ss.Location.IsNew();
     bool timenew = ss.Time.IsNew();
     if (locnew || timenew)

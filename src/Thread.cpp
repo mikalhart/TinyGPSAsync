@@ -29,19 +29,21 @@ void TaskSpecific::processNewSentence(string &s)
             string id = ps.SentenceId();
             if (id != "")
             {
-                LastSentence = AllSentences[id] = ps;
+                LastSentence = NewSentences[id] = ps;
                 hasNewSentences = true;
             }
 
             if (id == "RMC")
             {
                 ++Counters.rmcCount;
+                SnapshotSentences[id] = ps;
                 hasNewSnapshot = true;
             }
             
             if (id == "GGA")
             {
                 ++Counters.ggaCount;
+                SnapshotSentences[id] = ps;
                 hasNewSnapshot = true;
             }
 

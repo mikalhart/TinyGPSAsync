@@ -30,11 +30,12 @@ void loop()
 {
   int status = gps.DiagnosticCode();
   string statusString = gps.DiagnosticString();
-  auto &ss = gps.GetSnapshot();
-  auto &counters = ss.statistics;
-  Serial.printf("Characters Rx = %d  Sentences Valid/Invalid = %d/%d  Chksum pass/fail = %d/%d  Position Fix? %c  Status = '%s' (%d)\n",
-    counters.encodedCharCount, counters.validSentenceCount, counters.invalidSentenceCount, counters.passedChecksumCount, counters.failedChecksumCount,
-    ss.FixStatus.IsPositionValid() ? 'y' : 'n', statusString.c_str(), status);
-
-  delay(1000);
+  if (gps.NewCharactersAvailable())
+  {
+    auto &counters = gps.GetStatistics();
+    auto &ss = gps.GetSnapshot();
+    Serial.printf("Characters Rx = %d  Sentences Valid/Invalid = %d/%d  Chksum pass/fail = %d/%d  Position Fix? %c  Status = '%s' (%d)\n",
+      counters.encodedCharCount, counters.validSentenceCount, counters.invalidSentenceCount, counters.passedChecksumCount, counters.failedChecksumCount,
+      ss.FixStatus.IsPositionValid() ? 'y' : 'n', statusString.c_str(), status);
+  }
 }

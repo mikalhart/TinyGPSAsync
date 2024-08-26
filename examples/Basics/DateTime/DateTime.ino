@@ -25,14 +25,14 @@ void setup()
 
 void loop()
 {
-  if (gps.NewSentenceAvailable())
+  if (gps.NewSnapshotAvailable())
   {
     bool a = gps.NewSnapshotAvailable();
     bool b = gps.NewSatellitesAvailable();
     bool c = gps.NewSentenceAvailable();
     bool d = gps.NewCharactersAvailable();
-    const TinyGPSAsync::Snapshot &snapshot = gps.GetSnapshot();
-    const TinyGPSAsync::Sentences &sentences = snapshot.sentences;
+    const Snapshot &snapshot = gps.GetSnapshot();
+    const Sentences &sentences = gps.GetSentences();
     Serial.printf("%d:%d:%d:%d %02d:%02d:%02d.%02d %02d-%02d-%04d (%.6f, %.6f) %s\n", a, b, c, d,
       snapshot.Time.Hour(), snapshot.Time.Minute(), snapshot.Time.Second(), snapshot.Time.Centisecond(),
       snapshot.Date.Day(), snapshot.Date.Month(), snapshot.Date.Year(),

@@ -32,9 +32,6 @@ private:
     };
 
 public:
-    Satellites satellites;
-    Sentences sentences;
-    Statistics statistics;
     struct LocationItem : public Item
     {
         friend class TinyGPSAsync;

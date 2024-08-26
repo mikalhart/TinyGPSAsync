@@ -11,7 +11,7 @@
 #include "esp_task_wdt.h"
 using namespace std;
 
-#define _GPS_VERSION "0.0.3" // software version of this library
+#define _GPS_VERSION "0.0.4" // software version of this library
 
 class TinyGPSAsync
 {
@@ -19,12 +19,11 @@ public:
     enum Status {OK = 0, STREAM, WIRING, BAUD, OVERFLOW, MISSING };
     Status DiagnosticCode();
     string DiagnosticString();
-    Snapshot snapshot;
 
-    const Snapshot &GetSnapshot() { sync(); return snapshot; }
-    const Satellites &GetSatellites() { sync(); return snapshot.satellites;}
-    const Sentences &GetSentences() { sync(); return snapshot.sentences; }
-    const Statistics &GetStatistics() { sync(); return snapshot.statistics; }
+    const Snapshot &GetSnapshot() { syncSnapshot(); return snapshot; }
+    const Satellites &GetSatellites() { syncSatellites(); return satellites;}
+    const Sentences &GetSentences() { syncSentences(); return sentences; }
+    const Statistics &GetStatistics() { syncStatistics(); return statistics; }
     bool NewSnapshotAvailable() { return task.hasNewSnapshot; }
     bool NewSentenceAvailable() { return task.hasNewSentences; }
     bool NewCharactersAvailable() { return task.hasNewCharacters; }
@@ -33,8 +32,15 @@ public:
 private:
     uint32_t startTime;
     TaskSpecific task;
+    Snapshot snapshot;
+    Satellites satellites;
+    Sentences sentences;
+    Statistics statistics;
 
-    void sync();
+    void syncStatistics();
+    void syncSatellites();
+    void syncSentences();
+    void syncSnapshot();
     void processGGA(ParsedSentence &sentence);
     void processRMC(ParsedSentence &sentence);
 

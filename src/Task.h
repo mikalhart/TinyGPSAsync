@@ -16,7 +16,8 @@ public:
 
     /* Items guarded by mutex */
     ParsedSentence LastSentence;
-    std::map<string, ParsedSentence> AllSentences;
+    std::map<string, ParsedSentence> NewSentences;
+    std::map<string, ParsedSentence> SnapshotSentences;
     Statistics Counters;
     vector<SatInfo> AllSatellites;
     string SatelliteTalkerId;
@@ -25,14 +26,15 @@ private:
     /* Internal items (not guarded) */
     vector<SatInfo> SatelliteBuffer;
     Stream *stream = nullptr;
-public:
-    void Clear()
+    void clear()
     {
-        Counters.Clear();
-        AllSentences.clear();
+        Counters.clear();
+        NewSentences.clear();
         AllSatellites.clear();
         SatelliteTalkerId = "";
+        hasNewCharacters = hasNewSatellites = hasNewSentences = hasNewSnapshot = false;
     }
+public:
     const Stream *GetStream() const { return stream; }
     SemaphoreHandle_t gpsMutex = xSemaphoreCreateMutex();
     void processNewSentence(string &s);
@@ -52,7 +54,7 @@ public:
     {
         end();
         stream = &str;
-        Clear();
+        clear();
         taskActive = true;
 
         xTaskCreatePinnedToCore(gpsTask, "gpsTask", 10000, this, /* tskIDLE_PRIORITY */ uxTaskPriorityGet(NULL), NULL, 0);
