@@ -356,23 +356,17 @@ TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
     return OK;
 }
 
-string TinyGPSAsync::DiagnosticString()
+std::string TinyGPSAsync::DiagnosticString()
 {
-    Status status = DiagnosticCode();
-    switch (status)
+    static std::map<TinyGPSAsync::Status, std::string> myMap =
     {
-    case STREAM:
-        return "Parser not started";
-    case WIRING:
-        return "Possible wiring issue";
-    case BAUD:
-        return "Possible baud rate mismatch";
-    case OVERFLOW:
-        return "Characters dropping";
-    case MISSING:
-        return "GGA or RMC not available";
-    case OK:
-        return "Ok";
-    }
-    return "Unknown";
+        { STREAM, "Parser not started" },
+        { WIRING, "Possible wiring issue" },
+        { BAUD, "Possible baud rate mismatch" },
+        { OVERFLOW, "Characters dropping" },
+        { MISSING, "GGA or RMC not available" },
+        { OK, "Ok" }
+    };
+    Status status = DiagnosticCode();
+    return myMap.find(status) != myMap.end() ? myMap[status] : "Unknown";
 }
