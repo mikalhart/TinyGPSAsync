@@ -27,9 +27,11 @@ void Snapshot::LocationItem::LocationAngle::parseDegrees(const char *degTerm, co
 void Snapshot::DecimalItem::parse(const char *term)
 {
     bool negative = *term == '-';
-    if (negative) ++term;
+    if (negative)
+        ++term;
     int32_t ret = 100 * (int32_t)atol(term);
-    while (isdigit(*term)) ++term;
+    while (isdigit(*term))
+        ++term;
     if (*term == '.' && isdigit(term[1]))
     {
         ret += 10 * (term[1] - '0');
@@ -39,16 +41,15 @@ void Snapshot::DecimalItem::parse(const char *term)
     v = negative ? -ret : ret;
 }
 
-
 /* static */
 ParsedSentence ParsedSentence::FromString(const string &str)
 {
     ParsedSentence s;
-    s.lastUpdateTime = millis();
+    s.lastUpdateTime = Utils::msticks();
     s.isNew = true;
     s.charCount = str.length();
     size_t start = 0;
-    size_t delimiterPos = str.find_first_of(",*"); 
+    size_t delimiterPos = str.find_first_of(",*");
     unsigned long calculatedChksum = 0;
     log_d("Parsing sentence %s", str.c_str());
     while (true)
@@ -95,7 +96,7 @@ ParsedSentence ParsedSentence::FromString(const string &str)
 string ParsedSentence::String() const
 {
     string str;
-    for (int i=0; i<fields.size(); ++i)
+    for (int i = 0; i < fields.size(); ++i)
     {
         str += fields[i];
         if (i != fields.size() - 1)
@@ -176,7 +177,7 @@ void TinyGPSAsync::processRMC(ParsedSentence &sentence)
         snapshot.Course.parse(sentence[8].c_str());
         snapshot.Course.StampIt(sentence.Timestamp());
     }
-    
+
     if (sentence[9].length() > 0)
     {
         snapshot.Date.parse(sentence[9].c_str());
@@ -284,64 +285,64 @@ void TinyGPSAsync::syncSnapshot()
 /* static */
 const char *TinyGPSAsync::Cardinal(double course)
 {
-  static const char* directions[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
-  int direction = (int)((course + 11.25f) / 22.5f);
-  return directions[direction % 16];
+    static const char *directions[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+    int direction = (int)((course + 11.25f) / 22.5f);
+    return directions[direction % 16];
 }
 
 /* static */
 double TinyGPSAsync::DistanceBetween(double lat1, double long1, double lat2, double long2)
 {
-  // returns distance in meters between two positions, both specified
-  // as signed decimal-degrees latitude and longitude. Uses great-circle
-  // distance computation for hypothetical sphere of radius 6372795 meters.
-  // Because Earth is no exact sphere, rounding errors may be up to 0.5%.
-  // Courtesy of Maarten Lamers
-  double delta = radians(long1-long2);
-  double sdlong = sin(delta);
-  double cdlong = cos(delta);
-  lat1 = radians(lat1);
-  lat2 = radians(lat2);
-  double slat1 = sin(lat1);
-  double clat1 = cos(lat1);
-  double slat2 = sin(lat2);
-  double clat2 = cos(lat2);
-  delta = (clat1 * slat2) - (slat1 * clat2 * cdlong);
-  delta = sq(delta);
-  delta += sq(clat2 * sdlong);
-  delta = sqrt(delta);
-  double denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
-  delta = atan2(delta, denom);
-  return delta * Snapshot::_GPS_EARTH_RADIUS;
+    // returns distance in meters between two positions, both specified
+    // as signed decimal-degrees latitude and longitude. Uses great-circle
+    // distance computation for hypothetical sphere of radius 6372795 meters.
+    // Because Earth is no exact sphere, rounding errors may be up to 0.5%.
+    // Courtesy of Maarten Lamers
+    double delta = radians(long1 - long2);
+    double sdlong = sin(delta);
+    double cdlong = cos(delta);
+    lat1 = radians(lat1);
+    lat2 = radians(lat2);
+    double slat1 = sin(lat1);
+    double clat1 = cos(lat1);
+    double slat2 = sin(lat2);
+    double clat2 = cos(lat2);
+    delta = (clat1 * slat2) - (slat1 * clat2 * cdlong);
+    delta = sq(delta);
+    delta += sq(clat2 * sdlong);
+    delta = sqrt(delta);
+    double denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
+    delta = atan2(delta, denom);
+    return delta * Snapshot::_GPS_EARTH_RADIUS;
 }
 
 /* static */
 double TinyGPSAsync::CourseTo(double lat1, double long1, double lat2, double long2)
 {
-  // returns course in degrees (North=0, West=270) from position 1 to position 2,
-  // both specified as signed decimal-degrees latitude and longitude.
-  // Because Earth is no exact sphere, calculated course may be off by a tiny fraction.
-  // Courtesy of Maarten Lamers
-  double dlon = radians(long2-long1);
-  lat1 = radians(lat1);
-  lat2 = radians(lat2);
-  double a1 = sin(dlon) * cos(lat2);
-  double a2 = sin(lat1) * cos(lat2) * cos(dlon);
-  a2 = cos(lat1) * sin(lat2) - a2;
-  a2 = atan2(a1, a2);
-  if (a2 < 0.0)
-  {
-    a2 += TWO_PI;
-  }
-  return degrees(a2);
+    // returns course in degrees (North=0, West=270) from position 1 to position 2,
+    // both specified as signed decimal-degrees latitude and longitude.
+    // Because Earth is no exact sphere, calculated course may be off by a tiny fraction.
+    // Courtesy of Maarten Lamers
+    double dlon = radians(long2 - long1);
+    lat1 = radians(lat1);
+    lat2 = radians(lat2);
+    double a1 = sin(dlon) * cos(lat2);
+    double a2 = sin(lat1) * cos(lat2) * cos(dlon);
+    a2 = cos(lat1) * sin(lat2) - a2;
+    a2 = atan2(a1, a2);
+    if (a2 < 0.0)
+    {
+        a2 += TWO_PI;
+    }
+    return degrees(a2);
 }
 
 TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
 {
     if (task.GetStream() == nullptr)
         return STREAM;
-    auto & stats = GetStatistics();
-    if (millis() - startTime >= 5000)
+    auto &stats = GetStatistics();
+    if (Utils::msticks() - startTime >= 5000)
     {
         if (stats.encodedCharCount < 10)
             return WIRING;
@@ -358,20 +359,20 @@ TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
 string TinyGPSAsync::DiagnosticString()
 {
     Status status = DiagnosticCode();
-    switch(status)
+    switch (status)
     {
-        case STREAM:
-            return "Parser not started";
-        case WIRING:
-            return "Possible wiring issue";
-        case BAUD:
-            return "Possible baud rate mismatch";
-        case OVERFLOW:
-            return "Characters dropping";
-        case MISSING:
-            return "GGA or RMC not available";
-        case OK:
-            return "Ok";
+    case STREAM:
+        return "Parser not started";
+    case WIRING:
+        return "Possible wiring issue";
+    case BAUD:
+        return "Possible baud rate mismatch";
+    case OVERFLOW:
+        return "Characters dropping";
+    case MISSING:
+        return "GGA or RMC not available";
+    case OK:
+        return "Ok";
     }
     return "Unknown";
 }
