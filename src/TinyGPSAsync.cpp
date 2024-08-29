@@ -24,21 +24,27 @@ void Snapshot::LocationItem::LocationAngle::parseDegrees(const char *degTerm, co
     this->negative = *nsewTerm == 'W' || *nsewTerm == 'S';
 }
 
-void Snapshot::DecimalItem::parse(const char *term)
+void Snapshot::DecimalItem::parse(const string &term, uint32_t timestamp)
 {
-    bool negative = *term == '-';
-    if (negative)
-        ++term;
-    int32_t ret = 100 * (int32_t)atol(term);
-    while (isdigit(*term))
-        ++term;
-    if (*term == '.' && isdigit(term[1]))
+    stampIt(timestamp);
+    isVoid = term.empty();
+    if (!isVoid)
     {
-        ret += 10 * (term[1] - '0');
-        if (isdigit(term[2]))
-            ret += term[2] - '0';
+        const char *t = term.c_str();
+        bool negative = *t == '-';
+        if (negative)
+            ++t;
+        int32_t ret = 100 * (int32_t)atol(t);
+        while (isdigit(*t))
+            ++t;
+        if (*t == '.' && isdigit(t[1]))
+        {
+            ret += 10 * (t[1] - '0');
+            if (isdigit(t[2]))
+                ret += t[2] - '0';
+        }
+        v = negative ? -ret : ret;
     }
-    v = negative ? -ret : ret;
 }
 
 /* static */
@@ -105,84 +111,26 @@ string ParsedSentence::String() const
     return str;
 }
 
-void TinyGPSAsync::processGGA(ParsedSentence &sentence)
+void TinyGPSAsync::processGGA(const ParsedSentence &sentence)
 {
-    if (sentence[1].length() > 0)
-    {
-        snapshot.Time.parse(sentence[1].c_str());
-        snapshot.Time.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[2].length() > 0 && sentence[4].length() > 0)
-    {
-        snapshot.Location.RawLat.parseDegrees(sentence[2].c_str(), sentence[3].c_str());
-        snapshot.Location.RawLng.parseDegrees(sentence[4].c_str(), sentence[5].c_str());
-        snapshot.Location.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[6].length() > 0)
-    {
-        snapshot.Quality.parse(sentence[6].c_str());
-        snapshot.Quality.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[7].length() > 0)
-    {
-        snapshot.SatelliteCount.parse(sentence[7].c_str());
-        snapshot.SatelliteCount.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[8].length() > 0)
-    {
-        snapshot.HDOP.parse(sentence[8].c_str());
-        snapshot.HDOP.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[9].length() > 0)
-    {
-        snapshot.Altitude.parse(sentence[9].c_str());
-        snapshot.Altitude.StampIt(sentence.Timestamp());
-    }
+    auto timestamp = sentence.Timestamp();
+    snapshot.Time.parse(sentence[1].c_str(), timestamp);
+    snapshot.Location.parse(sentence[2], sentence[3], sentence[4], sentence[5], timestamp);
+    snapshot.Quality.parse(sentence[6], timestamp);
+    snapshot.SatelliteCount.parse(sentence[7], timestamp);
+    snapshot.HDOP.parse(sentence[8].c_str(), timestamp);
+    snapshot.Altitude.parse(sentence[9].c_str(), timestamp);
 }
 
-void TinyGPSAsync::processRMC(ParsedSentence &sentence)
+void TinyGPSAsync::processRMC(const ParsedSentence &sentence)
 {
-    if (sentence[1].length() > 0)
-    {
-        snapshot.Time.parse(sentence[1].c_str());
-        snapshot.Time.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[2].length() > 0)
-    {
-        snapshot.FixStatus.parse(sentence[2].c_str());
-        snapshot.FixStatus.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[3].length() > 0 && sentence[5].length() > 0)
-    {
-        snapshot.Location.RawLat.parseDegrees(sentence[3].c_str(), sentence[4].c_str());
-        snapshot.Location.RawLng.parseDegrees(sentence[5].c_str(), sentence[6].c_str());
-        snapshot.Location.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[7].length() > 0)
-    {
-        snapshot.Speed.parse(sentence[7].c_str());
-        snapshot.Speed.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[8].length() > 0)
-    {
-        snapshot.Course.parse(sentence[8].c_str());
-        snapshot.Course.StampIt(sentence.Timestamp());
-    }
-
-    if (sentence[9].length() > 0)
-    {
-        snapshot.Date.parse(sentence[9].c_str());
-        snapshot.Date.StampIt(sentence.Timestamp());
-    }
+    auto timestamp = sentence.Timestamp();
+    snapshot.Time.parse(sentence[1].c_str(), timestamp);
+    snapshot.FixStatus.parse(sentence[2].c_str(), timestamp);
+    snapshot.Location.parse(sentence[3], sentence[4], sentence[5], sentence[6], timestamp);
+    snapshot.Speed.parse(sentence[7].c_str(), timestamp);
+    snapshot.Course.parse(sentence[8].c_str(), timestamp);
+    snapshot.Date.parse(sentence[9], timestamp);
 }
 
 void TinyGPSAsync::syncStatistics()

@@ -7,7 +7,7 @@ namespace TinyGPS
     class Snapshot
     {
         friend class TinyGPSAsync;
-    public:
+    private:
         static constexpr double _GPS_MPH_PER_KNOT = 1.15077945;
         static constexpr double _GPS_MPS_PER_KNOT = 0.51444444;
         static constexpr double _GPS_KMPH_PER_KNOT = 1.852;
@@ -16,7 +16,6 @@ namespace TinyGPS
         static constexpr double _GPS_FEET_PER_METER = 3.2808399;
         static constexpr double _GPS_EARTH_RADIUS = 6372795;
 
-    private:
         struct Item
         {
             friend class TinyGPSAsync;
@@ -24,10 +23,12 @@ namespace TinyGPS
             mutable uint32_t lastUpdateTime = 0;
             mutable bool everUpdated = false;
             mutable bool isNew = false;
-            void StampIt(uint32_t timestamp) { everUpdated = isNew = true; lastUpdateTime = timestamp; }
+            mutable bool isVoid = true;
+            void stampIt(uint32_t timestamp) { everUpdated = isNew = true; lastUpdateTime = timestamp; }
 
         public:
             bool     IsNew() const       { return isNew; }
+            bool     IsVoid() const      { return isVoid; }
             bool     EverUpdated() const { return everUpdated; }
             uint32_t Age() const         { return everUpdated ? Utils::msticks() - lastUpdateTime : ULONG_MAX; }
             uint32_t Timestamp() const   { return lastUpdateTime; }
@@ -45,6 +46,16 @@ namespace TinyGPS
                 bool negative = false;
                 void parseDegrees(const char *degTerm, const char *nsewTerm);
             } RawLat, RawLng;
+            void parse(const string &termLat, const string &NS, const string &termLng, const string &EW, uint32_t timestamp)
+            {
+                stampIt(timestamp);
+                isVoid = termLat.empty() || termLng.empty();
+                if (!isVoid)
+                {
+                    RawLat.parseDegrees(termLat.c_str(), NS.c_str());
+                    RawLng.parseDegrees(termLng.c_str(), EW.c_str());
+                }
+            }
         public:
             double Lat() const
             {
@@ -68,7 +79,13 @@ namespace TinyGPS
             QualityEnum Value() const { isNew = false; return v; }
         private:
             QualityEnum v = Invalid;
-            void parse(const char *term) { v = (QualityEnum)*term; }
+            void parse(const string &term, uint32_t timestamp) 
+            { 
+                stampIt(timestamp);
+                isVoid = term.empty();
+                if (!isVoid)
+                    v = (QualityEnum)term[0]; 
+            }
         };
 
         struct FixStatusItem : public Item
@@ -76,11 +93,17 @@ namespace TinyGPS
             friend class TinyGPSAsync;
         public:
             enum StatusEnum { N = 'N', V = 'V' , A = 'A'};
-            StatusEnum Value() const { isNew = false; return v; }
+            StatusEnum Value() const { isNew = false; return isVoid ? N : v; }
             bool IsPositionValid() const { isNew = false; return v == A; }
         private:
             StatusEnum v = N;
-            void parse(const char *term) { v = (StatusEnum)*term; }
+            void parse(const string &term, uint32_t timestamp)
+            {
+                stampIt(timestamp);
+                isVoid = term.empty();
+                if (!isVoid)
+                    v = (StatusEnum)term[0];
+            }
         };
 
         struct IntegerItem : public Item
@@ -88,12 +111,18 @@ namespace TinyGPS
             friend class TinyGPSAsync;
         protected:
             uint32_t v = 0;
-            void parse(const char *term) { v = atol(term); }
+            void parse(const string &term, uint32_t timestamp) 
+            {
+                stampIt(timestamp);
+                isVoid = term.empty();
+                if (!isVoid)
+                    v = atol(term.c_str());
+            }
         public:
             uint32_t Value() const { isNew = false; return v; }
         };
 
-        struct DateItem : public IntegerItem // todo fix parse once
+        struct DateItem : public IntegerItem
         {
             uint16_t Year() const { isNew = false; return v % 100 + 2000; }
             uint8_t Month() const { isNew = false; return (v / 100) % 100; }
@@ -105,7 +134,7 @@ namespace TinyGPS
             friend class TinyGPSAsync;
         protected:
             int32_t v = 0;
-            void parse(const char *term);
+            void parse(const string &term, uint32_t timestamp);
         public:
             int32_t Value() const { isNew = false; return v; }
         };
@@ -129,7 +158,7 @@ namespace TinyGPS
         struct CourseItem : public DecimalItem
         {
             double Degrees() const  { isNew = false; return v / 100.0; }
-            double Radians() const  { isNew = false; return Degrees() * PI / 180.0; }
+            double Radians() const  { isNew = false; return v * PI / 18000.0; }
         };
 
         struct AltitudeItem : public DecimalItem

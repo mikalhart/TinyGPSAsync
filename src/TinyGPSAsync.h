@@ -14,7 +14,7 @@ using namespace std;
 using namespace TinyGPS;
 namespace TinyGPS
 {
-    #define _GPS_VERSION "0.0.5" // software version of this library
+    #define _GPS_VERSION "0.0.6" // software version of this library
 
     class TinyGPSAsync
     {
@@ -45,8 +45,8 @@ namespace TinyGPS
         void syncSatellites();
         void syncSentences();
         void syncSnapshot();
-        void processGGA(ParsedSentence &sentence);
-        void processRMC(ParsedSentence &sentence);
+        void processGGA(const ParsedSentence &sentence);
+        void processRMC(const ParsedSentence &sentence);
 
     public:
         void end()
