@@ -18,7 +18,7 @@ namespace TinyGPS
         /// @brief Indicates whether the sentence has reasonable NMEA construction
         /// @details Note: This method returns true if the sentence *has* a checksum, even if it's wrong
         /// @return true if sentence is valid NMEA
-        bool IsValid() const            { return fields.size() > 0  && fields[0].length() == 6 && fields[0][0] == '$' && hasChecksum; }
+        bool IsValid() const            { return fields.size() > 0 && fields[0].length() <= 6 && fields[0].length() > 1 && fields[0][0] == '$' && hasChecksum; }
         /// @brief Tests whether the NMEA checksum is correct
         /// @return true if Checksum is present and valid
         bool ChecksumValid() const      { return checksumValid; }
@@ -39,6 +39,11 @@ namespace TinyGPS
     {
         ParsedSentence LastSentence;
         std::map<string, ParsedSentence> AllSentences;
-        const ParsedSentence &operator[] (const char *id) const { return AllSentences.at(id); }
+        ParsedSentence empty;
+        const ParsedSentence &operator[] (const char *id) const 
+        { 
+            auto ret = AllSentences.find(id);
+            return ret == AllSentences.end() ? empty : ret->second;
+        }
     };
 }

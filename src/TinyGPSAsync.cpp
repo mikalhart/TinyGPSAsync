@@ -111,6 +111,28 @@ string ParsedSentence::String() const
     return str;
 }
 
+ParsedUbxPacket ParsedUbxPacket::FromUbx(const Ubx &ubx)
+{
+    ParsedUbxPacket u;
+    u.lastUpdateTime = Utils::msticks();
+    u.isNew = true;
+    u.charCount = 8 + ubx.payload.size();
+    unsigned long calculatedChksum = 0;
+    log_d("Parsing Ubx %d.%d", ubx.clss, ubx.id);
+    u.valid = ubx.sync[0] == 0xB5 && ubx.sync[1] == 0x62;
+    byte ck_A = 0, ck_B = 0;
+    uint16_t len = ubx.payload.size();
+    updateChecksum(ck_A, ck_B, ubx.clss);
+    updateChecksum(ck_A, ck_B, ubx.id);
+    updateChecksum(ck_A, ck_B, (byte)len);
+    updateChecksum(ck_A, ck_B, (byte)(len >> 8));
+    for (int i=0; i<len; ++i)
+        updateChecksum(ck_A, ck_B, ubx.payload[i]);
+    u.checksumValid = ck_A == ubx.chksum[0] && ck_B == ubx.chksum[1];
+    u.ubx = ubx;
+    return u;
+}
+
 void TinyGPSAsync::processGGA(const ParsedSentence &sentence)
 {
     auto timestamp = sentence.Timestamp();
@@ -198,6 +220,20 @@ void TinyGPSAsync::syncSentences()
             sentences.AllSentences[kvp.first] = kvp.second;
         }
         task.hasNewSentences = false;
+    }
+}
+
+void TinyGPSAsync::syncUbxPackets()
+{
+    if (task.hasNewUbxPackets)
+    {
+        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
+        {
+            ubxPackets.LastUbxPacket = task.LastUbxPacket;
+            xSemaphoreGive(task.gpsMutex);
+        }
+
+        task.hasNewUbxPackets = false;
     }
 }
 

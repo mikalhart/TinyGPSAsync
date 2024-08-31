@@ -13,6 +13,7 @@ namespace TinyGPS
         std::atomic<bool> hasNewCharacters;
         std::atomic<bool> hasNewSatellites;
         std::atomic<bool> hasNewSentences;
+        std::atomic<bool> hasNewUbxPackets;
         std::atomic<bool> hasNewSnapshot;
         std::atomic<bool> taskActive;
 
@@ -20,11 +21,16 @@ namespace TinyGPS
         ParsedSentence LastSentence;
         std::map<string, ParsedSentence> NewSentences;
         std::map<string, ParsedSentence> SnapshotSentences;
+        ParsedUbxPacket LastUbxPacket;
+        std::map<string, ParsedUbxPacket> NewUbxPackets;
+
         Statistics Counters;
         vector<SatInfo> AllSatellites;
         string SatelliteTalkerId;
 
     private:
+        string buffer;
+
         /* Internal items (not guarded) */
         vector<SatInfo> SatelliteBuffer;
         Stream *stream = nullptr;
@@ -39,9 +45,13 @@ namespace TinyGPS
     public:
         const Stream *GetStream() const { return stream; }
         SemaphoreHandle_t gpsMutex = xSemaphoreCreateMutex();
-        void processNewSentence(string &s);
-        void processGarbageCharacters(int count);
-        static void gpsTask(void *pvParameters);
+        void flushBuffer();
+        void processNewSentence(const string &s);
+        void processNewUbxPacket(const Ubx &ubx);
+        void tryParseSentence();
+        void tryParseUbxPacket();
+        void discardCharacter(byte c);
+        static void parseStream(void *pvParameters);
         void end()
         {
             if (taskActive)
@@ -59,7 +69,7 @@ namespace TinyGPS
             clear();
             taskActive = true;
 
-            xTaskCreatePinnedToCore(gpsTask, "gpsTask", 10000, this, /* tskIDLE_PRIORITY */ uxTaskPriorityGet(NULL), NULL, 0);
+            xTaskCreatePinnedToCore(parseStream, "GPS Parsing Task", 10000, this, /* tskIDLE_PRIORITY */ uxTaskPriorityGet(NULL), NULL, 0);
 
             return true;
         }

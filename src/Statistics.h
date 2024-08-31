@@ -4,7 +4,9 @@ namespace TinyGPS
     {
         uint32_t encodedCharCount = 0;
         uint32_t validSentenceCount = 0;
+        uint32_t validUbxCount = 0;
         uint32_t invalidSentenceCount = 0;
+        uint32_t invalidUbxCount = 0;
         uint32_t failedChecksumCount = 0;
         uint32_t passedChecksumCount = 0;
         uint32_t ggaCount = 0;

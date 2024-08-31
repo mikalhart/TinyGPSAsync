@@ -1,5 +1,6 @@
 #include "Satellites.h"
 #include "Sentence.h"
+#include "Ubx.h"
 #include "Statistics.h"
 
 namespace TinyGPS

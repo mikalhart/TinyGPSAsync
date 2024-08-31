@@ -3,7 +3,7 @@ setlocal
 
 :: Check if a parameter is provided; if not, use default value
 if "%~1"=="" (
-    set "SketchName=Location.ino"
+    set "SketchName=TTFTest.ino"
 ) else (
     set "SketchName=%~1"
 )

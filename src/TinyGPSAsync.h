@@ -27,9 +27,11 @@ namespace TinyGPS
         const Snapshot &GetSnapshot() { syncSnapshot(); return snapshot; }
         const Satellites &GetSatellites() { syncSatellites(); return satellites;}
         const Sentences &GetSentences() { syncSentences(); return sentences; }
+        const UbxPackets &GetUbxPackets() { syncUbxPackets(); return ubxPackets; }
         const Statistics &GetStatistics() { syncStatistics(); return statistics; }
         bool NewSnapshotAvailable() { return task.hasNewSnapshot; }
         bool NewSentenceAvailable() { return task.hasNewSentences; }
+        bool NewUbxPacketAvailable() { return task.hasNewUbxPackets; }
         bool NewCharactersAvailable() { return task.hasNewCharacters; }
         bool NewSatellitesAvailable() { return task.hasNewSatellites; }
 
@@ -39,11 +41,13 @@ namespace TinyGPS
         Snapshot snapshot;
         Satellites satellites;
         Sentences sentences;
+        UbxPackets ubxPackets;
         Statistics statistics;
 
         void syncStatistics();
         void syncSatellites();
         void syncSentences();
+        void syncUbxPackets();
         void syncSnapshot();
         void processGGA(const ParsedSentence &sentence);
         void processRMC(const ParsedSentence &sentence);
