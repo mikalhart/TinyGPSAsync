@@ -231,7 +231,7 @@ void TaskSpecific::parseStream(void *pvParameters)
             else
                 pThis->discardCharacter(c);
         }
-        vTaskDelay(0);  // to avoid killing Idle thread watchdog
+        delay(1);   // to avoid killing Idle thread watchdog
     }
     vTaskDelete(NULL);
 }
