@@ -141,27 +141,30 @@ void TaskSpecific::tryParseSentence()
     flushBuffer();
     buffer += '$';
     while (true)
-    if (stream->available())
     {
-        char c = stream->read();
-        buffer += c;
-        if (c == '\n')
+        if (stream->available())
         {
-            if (buffer.length() >= 2 && buffer[buffer.length() - 2] == '\r')
+            char c = stream->read();
+            buffer += c;
+            if (c == '\n')
             {
-                string nmea = buffer.substr(0, buffer.length() - 2);
-                processNewSentence(nmea);
-                buffer.clear();
-            }
+                if (buffer.length() >= 2 && buffer[buffer.length() - 2] == '\r')
+                {
+                    string nmea = buffer.substr(0, buffer.length() - 2);
+                    processNewSentence(nmea);
+                    buffer.clear();
+                }
 
-            break;
-        }
-        if (buffer.length() == buffer.capacity())
-        {
+                break;
+            }
+            if (buffer.length() == buffer.capacity())
+            {
 Serial.printf("Sentence Error len: %s ***\n", buffer.c_str());
-            flushBuffer();
-            break;
+                flushBuffer();
+                break;
+            }
         }
+        vTaskDelay(0);  // to avoid killing Idle thread watchdog
     }
 }
 
@@ -173,37 +176,40 @@ void TaskSpecific::tryParseUbxPacket()
     buffer += 0xB5;
     uint16_t payloadLen = 0;
     while (true)
-    if (stream->available())
     {
-        byte b = stream->read();
-        buffer += b;
-        bool fail = buffer.length() == buffer.capacity() || (buffer.length() == 2 && b != 0x62);
-        if (fail)
+        if (stream->available())
         {
-Serial.printf("\n\n***Packet error len: %d cap: %d\n b: %x buf: [%x,%x]\n\n", buffer.length(), buffer.capacity(), b, buffer[0], buffer[1]);
-            flushBuffer();
-            break;
-        }
+            byte b = stream->read();
+            buffer += b;
+            bool fail = buffer.length() == buffer.capacity() || (buffer.length() == 2 && b != 0x62);
+            if (fail)
+            {
+    Serial.printf("\n\n***Packet error len: %d cap: %d\n b: %x buf: [%x,%x]\n\n", buffer.length(), buffer.capacity(), b, buffer[0], buffer[1]);
+                flushBuffer();
+                break;
+            }
 
-        if (buffer.length() == 6)
-        {
-            payloadLen = 0x100 * (byte)buffer[5] + (byte)buffer[4];
-        }
+            if (buffer.length() == 6)
+            {
+                payloadLen = 0x100 * (byte)buffer[5] + (byte)buffer[4];
+            }
 
-        if (buffer.length() == 6 + payloadLen + 2)
-        {
-            Ubx ubx;
-            ubx.sync[0] = buffer[0];
-            ubx.sync[1] = buffer[1];
-            ubx.clss = buffer[2];
-            ubx.id = buffer[3];
-            ubx.payload = vector<byte>(buffer.begin() + 6, buffer.begin() + 6 + payloadLen);
-            ubx.chksum[0] = buffer[6 + payloadLen];
-            ubx.chksum[1] = buffer[6 + payloadLen + 1];
-            processNewUbxPacket(ubx);
-            flushBuffer();
-            break;
+            if (buffer.length() == 6 + payloadLen + 2)
+            {
+                Ubx ubx;
+                ubx.sync[0] = buffer[0];
+                ubx.sync[1] = buffer[1];
+                ubx.clss = buffer[2];
+                ubx.id = buffer[3];
+                ubx.payload = vector<byte>(buffer.begin() + 6, buffer.begin() + 6 + payloadLen);
+                ubx.chksum[0] = buffer[6 + payloadLen];
+                ubx.chksum[1] = buffer[6 + payloadLen + 1];
+                processNewUbxPacket(ubx);
+                flushBuffer();
+                break;
+            }
         }
+        vTaskDelay(0);  // to avoid killing Idle thread watchdog
     }
 }
 
@@ -225,7 +231,7 @@ void TaskSpecific::parseStream(void *pvParameters)
             else
                 pThis->discardCharacter(c);
         }
-        delay(1); // to avoid killing Idle thread watchdog
+        vTaskDelay(0);  // to avoid killing Idle thread watchdog
     }
     vTaskDelete(NULL);
 }

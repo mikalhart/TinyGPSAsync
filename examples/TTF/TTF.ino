@@ -18,7 +18,7 @@
 #define WARMRESETBYTES "$PMTK102*31\r\n"
 #define HOTRESETBYTES  "$PMTK101*32\r\n"
 #define isValidDateTime(d, t) (d.Year() != 2080 || d.Month() != 1)
-#elif false // Quescan M10FD
+#elif true // Quescan M10FD
 #define GPSNAME "Quescan M10FD"
 #define RX D1
 #define TX D0
