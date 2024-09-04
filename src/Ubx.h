@@ -1,4 +1,3 @@
-#include <vector>
 #include <map>
 using namespace std;
 
@@ -6,11 +5,11 @@ namespace TinyGPS
 {
     struct Ubx
     {
-        byte sync[2];
-        byte clss;
-        byte id;
-        vector<byte> payload;
-        byte chksum[2];
+        uint8_t sync[2];
+        uint8_t clss;
+        uint8_t id;
+        vector<uint8_t> payload;
+        uint8_t chksum[2];
     };
 
     class ParsedUbxPacket
@@ -39,8 +38,6 @@ namespace TinyGPS
         uint32_t Timestamp() const      { return lastUpdateTime; }
         byte Class() const              { return ubx.clss; }
         byte Id() const                 { return ubx.id; }
-        // string TalkerId() const         { return IsValid() ? fields[0].substr(1, 2) : ""; }
-        // string SentenceId() const       { return IsValid() ? fields[0].substr(3) : ""; }
         void Clear()                    { ubx.clss = ubx.id = 0; ubx.payload.clear(); }
         uint8_t CharCount() const       { return charCount; }
         const Ubx &Packet() const       { return ubx; }

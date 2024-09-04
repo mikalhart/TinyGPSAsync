@@ -32,7 +32,7 @@ void loop()
     bool locnew = ss.Location.IsNew();
     bool timenew = ss.Time.IsNew();
     if (locnew || timenew)
-      Serial.printf("%c(%f, %f) %c%02d:%02d:%02d %s\n", locnew ? '*' : ' ', ss.Location.Lat(), ss.Location.Lng(), timenew ? '*' : ' ', ss.Time.Hour(), ss.Time.Minute(), ss.Time.Second(), st.LastSentence.String().c_str());
+      Serial.printf("%c(%f, %f) %c%02d:%02d:%02d %s\n", locnew ? '*' : ' ', ss.Location.Lat(), ss.Location.Lng(), timenew ? '*' : ' ', ss.Time.Hour(), ss.Time.Minute(), ss.Time.Second(), st.LastSentence.ToString().c_str());
   }
 
   int parserStatus = gps.DiagnosticCode();

@@ -99,7 +99,7 @@ ParsedSentence ParsedSentence::FromString(const string &str)
     return s;
 }
 
-string ParsedSentence::String() const
+string ParsedSentence::ToString() const
 {
     string str;
     for (int i = 0; i < fields.size(); ++i)
@@ -111,24 +111,33 @@ string ParsedSentence::String() const
     return str;
 }
 
+string ParsedUbxPacket::String() const
+{
+    char buf[100];
+    sprintf(buf, "UBX: Class=%d Id=%d Len=%d Chksum=%x.%x (%s)\n", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
+    return buf;
+}
+
 ParsedUbxPacket ParsedUbxPacket::FromUbx(const Ubx &ubx)
 {
     ParsedUbxPacket u;
+    uint16_t len = ubx.payload.size();
     u.lastUpdateTime = Utils::msticks();
     u.isNew = true;
-    u.charCount = 8 + ubx.payload.size();
+    u.charCount = 8 + len;
     unsigned long calculatedChksum = 0;
     log_d("Parsing Ubx %d.%d", ubx.clss, ubx.id);
     u.valid = ubx.sync[0] == 0xB5 && ubx.sync[1] == 0x62;
     byte ck_A = 0, ck_B = 0;
-    uint16_t len = ubx.payload.size();
     updateChecksum(ck_A, ck_B, ubx.clss);
     updateChecksum(ck_A, ck_B, ubx.id);
-    updateChecksum(ck_A, ck_B, (byte)len);
-    updateChecksum(ck_A, ck_B, (byte)(len >> 8));
+    updateChecksum(ck_A, ck_B, (byte)(len & 0xFF));
+    updateChecksum(ck_A, ck_B, (byte)((len >> 8) & 0xFF));
     for (int i=0; i<len; ++i)
         updateChecksum(ck_A, ck_B, ubx.payload[i]);
     u.checksumValid = ck_A == ubx.chksum[0] && ck_B == ubx.chksum[1];
+if (!u.checksumValid)
+Serial.printf("\n\nExpected %02X:%02X got %02X:%02X\n\n", ubx.chksum[0], ubx.chksum[1], ck_A, ck_B);
     u.ubx = ubx;
     return u;
 }
@@ -154,6 +163,23 @@ void TinyGPSAsync::processRMC(const ParsedSentence &sentence)
     snapshot.Course.parse(sentence[8].c_str(), timestamp);
     snapshot.Date.parse(sentence[9], timestamp);
 }
+
+void TinyGPSAsync::processUbx17(const ParsedUbxPacket &pu)
+{
+    auto & payload = pu.Packet().payload;
+    auto timestamp = pu.Timestamp();
+    byte validityFlags = payload[11];
+    if (validityFlags & 0x1) // date valid
+    {
+
+    }
+
+    if (validityFlags & 0x2) // time valid
+    {
+//        snapshot.Time = Snapshot::TimeItem::FromTime(payload[8], payload[9], payload[10], 0);
+    }
+}
+
 
 void TinyGPSAsync::syncStatistics()
 {
@@ -214,25 +240,29 @@ void TinyGPSAsync::syncSentences()
             xSemaphoreGive(task.gpsMutex);
         }
 
-        // Step 4: After the semaphore has been released, process all new sentences
+        // After the semaphore has been released, process all new sentences
         for (auto kvp : newSentences)
-        {
             sentences.AllSentences[kvp.first] = kvp.second;
-        }
         task.hasNewSentences = false;
     }
 }
 
 void TinyGPSAsync::syncUbxPackets()
 {
+    std::map<string, ParsedUbxPacket> newUbxPackets;
     if (task.hasNewUbxPackets)
     {
         if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
         {
             ubxPackets.LastUbxPacket = task.LastUbxPacket;
+            newUbxPackets = task.NewUbxPackets;
+            task.NewUbxPackets.clear();
             xSemaphoreGive(task.gpsMutex);
         }
 
+        // After the semaphore has been released, process all new ubx packets
+        for (auto kvp : newUbxPackets)
+            ubxPackets.AllUbxPackets[kvp.first] = kvp.second;
         task.hasNewUbxPackets = false;
     }
 }
@@ -242,16 +272,19 @@ void TinyGPSAsync::syncSnapshot()
     if (task.hasNewSnapshot)
     {
         std::map<string, ParsedSentence> newSentences;
+        std::map<string, ParsedUbxPacket> newUbxPackets;
         log_d("Taking semaphore");
         if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
         {
-            // Step 2: Copy over all new sentences
+            // Copy over all new sentences and packets
             newSentences = task.SnapshotSentences;
             task.SnapshotSentences.clear();
+            newUbxPackets = task.SnapshotUbxPackets;
+            task.SnapshotUbxPackets.clear();
             xSemaphoreGive(task.gpsMutex);
         }
 
-        // Step 4: After the semaphore has been released, process all new sentences
+        // After the semaphore has been released, process all new sentences and packets
         for (auto kvp : newSentences)
         {
             if (kvp.second.ChecksumValid())
@@ -260,6 +293,14 @@ void TinyGPSAsync::syncSnapshot()
                     processGGA(kvp.second);
                 else if (kvp.first == "RMC")
                     processRMC(kvp.second);
+            }
+        }
+
+        for (auto kvp : newUbxPackets)
+        {
+            if (kvp.second.ChecksumValid())
+            {
+                processUbx17(kvp.second);
             }
         }
         task.hasNewSnapshot = false;

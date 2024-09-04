@@ -30,9 +30,10 @@ namespace TinyGPS
         void Clear()                    { fields.clear(); }
         string operator[](int field) const   { return field >= fields.size() ? "" : fields[field]; }
         uint8_t CharCount() const       { return charCount; }
+        size_t FieldCount() const       { return fields.size(); }
 
         static ParsedSentence FromString(const string &str);
-        string String() const;
+        string ToString() const;
     };
 
     struct Sentences

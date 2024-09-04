@@ -61,7 +61,7 @@ static string lastno = "";
   if (gps.NewSentenceAvailable())
   {
     auto &sent = gps.GetSentences();
-    Serial.printf("%s%s\n", sent.LastSentence.SentenceId() == "GSV" ? "---" : "   ", sent.LastSentence.String().c_str());
+    Serial.printf("%s%s\n", sent.LastSentence.SentenceId() == "GSV" ? "---" : "   ", sent.LastSentence.ToString().c_str());
     if (sent.LastSentence.SentenceId() == "GSV")
     {
       bool printit = false;

@@ -146,6 +146,12 @@ namespace TinyGPS
             uint8_t Minute() const      { isNew = false; return (v / 10000) % 100; }
             uint8_t Second() const      { isNew = false; return (v / 100) % 100; }
             uint8_t Centisecond() const { isNew = false; return v % 100; }
+            static TimeItem FromTime(uint8_t hour, uint8_t minute, uint8_t second, uint8_t centisecond)
+            {
+                TimeItem ti;
+                ti.v = hour * 1000000 + minute * 10000 + second * 100 + centisecond;
+                return ti;
+            }
         };
 
         struct SpeedItem : public DecimalItem

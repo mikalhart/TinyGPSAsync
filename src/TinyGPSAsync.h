@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <map>
-#include <vector>
 #include "Utils.h"
 #include "Snapshot.h"
 #include "Task.h"
@@ -51,6 +50,7 @@ namespace TinyGPS
         void syncSnapshot();
         void processGGA(const ParsedSentence &sentence);
         void processRMC(const ParsedSentence &sentence);
+        void processUbx17(const ParsedUbxPacket &pu);
 
     public:
         void end()

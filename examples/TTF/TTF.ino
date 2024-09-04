@@ -18,7 +18,7 @@
 #define WARMRESETBYTES "$PMTK102*31\r\n"
 #define HOTRESETBYTES  "$PMTK101*32\r\n"
 #define isValidDateTime(d, t) (d.Year() != 2080 || d.Month() != 1)
-#elif true // Quescan M10FD
+#elif false // Quescan M10FD
 #define GPSNAME "Quescan M10FD"
 #define RX D1
 #define TX D0
@@ -56,7 +56,7 @@ void setup()
   digitalWrite(D7, LOW); // GPS off for now
 
   Serial.begin(115200);
-  delay(3000);
+//  delay(3000);
 
 #if defined(LED_BUILTIN)
   pinMode(LED_BUILTIN, OUTPUT);
@@ -66,7 +66,7 @@ void setup()
   Serial1.begin(GPSBAUD, SERIAL_8N1, RX, TX);
 #if defined(INITIALSTART)
 {
-    delay(2000);
+//    delay(2000);
     for (auto ch: INITIALSTART)
         Serial1.write(ch);
 }
@@ -147,26 +147,26 @@ void loop()
 
     for (byte c: COLDRESETBYTES)
       Serial1.write(c);
-    delay(1000);
+//    delay(1000);
     Doit(1);
 
     Serial.println();
     Serial.println("*** Warm reset ***                                                                                           ");
     for (byte c: WARMRESETBYTES)
       Serial1.write(c);
-    delay(1000);
+//    delay(1000);
     Doit(2);
 
     Serial.println();
     Serial.println("*** Hot reset ***                                                                                           ");
     for (byte c: HOTRESETBYTES)
       Serial1.write(c);
-    delay(1000);
+//    delay(1000);
     Doit(3);
 
     // Turn off GPS
     digitalWrite(D7, LOW);
-    delay(1000);
+//    delay(1000);
 
     ++loopcount;
     Serial.printf("\n");
@@ -191,11 +191,14 @@ void Doit(int count)
     int tt = max, td = max, tl = max, tf = max, ts[4] = {max, max, max, max};
     while ((tl == max || ts[3] == max || td == max || tt == max || tf == max) && seconds - startsec < max)
     {
+esp_task_wdt_reset();
+yield();
+vTaskDelay(1);
         if (seconds - startsec < 5 && gps.NewSentenceAvailable())
         {
             auto &s = gps.GetSentences();
             if (s.LastSentence.SentenceId() == "TXT")
-                Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, s.LastSentence.String().c_str());
+                Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, s.LastSentence.ToString().c_str());
 //          if (s.LastSentence.SentenceId() == "RMC")
 //              Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, s.LastSentence.String().c_str());
 //          if (s.LastSentence.SentenceId() == "GGA")
@@ -226,12 +229,9 @@ static int lastgga = -1;
                 sprintf(latstring, "% 2.6f", l.Lat());
                 sprintf(lngstring, "% 3.6f", l.Lng());
             }
-            Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d Diags=%d\r", seconds - startsec,
+            Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d UBX17=%d Diags=%d\r", seconds - startsec,
                 datestring, timestring, latstring, lngstring, f.Value(), s.Value(),
-                stats.ggaCount, stats.rmcCount, gps.DiagnosticCode());
-if (stats.ggaCount == lastgga)
-Serial.println("*************************************************************************************");
-lastgga = stats.ggaCount;
+                stats.ggaCount, stats.rmcCount, stats.ubx17Count, gps.DiagnosticCode());
             if (tt == max && !t.IsVoid() && isValidDateTime(d, t))
             {
                 Serial.printf("%03d: Got Time (%02d:%02d:%02d)                                                                                      \n", seconds - startsec, t.Hour(), t.Minute(), t.Second());
@@ -250,13 +250,11 @@ lastgga = stats.ggaCount;
                 td = seconds - startsec;
             }
 
-#if false // Some devices don't emit RMC every second
             if (td != max && d.Age() > 2000)
             {
                 Serial.printf("%03d: Lost Date (%02d-%02d-%04d)                                              \n", seconds - startsec, d.Day(), d.Month(), d.Year());
                 td = max;
             }
-#endif
             if (tl == max && !l.IsVoid())
             {
                 Serial.printf("%03d: Got Location (%.6f %.6f)                                                                                       \n", seconds - startsec, l.Lat(), l.Lng());

@@ -37,6 +37,6 @@ void loop()
       snapshot.Time.Hour(), snapshot.Time.Minute(), snapshot.Time.Second(), snapshot.Time.Centisecond(),
       snapshot.Date.Day(), snapshot.Date.Month(), snapshot.Date.Year(),
       snapshot.Location.Lat(), snapshot.Location.Lng(),
-      sentences.LastSentence.String().c_str());
+      sentences.LastSentence.ToString().c_str());
   }
 }

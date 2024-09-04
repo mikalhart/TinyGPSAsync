@@ -23,6 +23,7 @@ namespace TinyGPS
         std::map<string, ParsedSentence> SnapshotSentences;
         ParsedUbxPacket LastUbxPacket;
         std::map<string, ParsedUbxPacket> NewUbxPackets;
+        std::map<string, ParsedUbxPacket> SnapshotUbxPackets;
 
         Statistics Counters;
         vector<SatInfo> AllSatellites;
@@ -50,7 +51,7 @@ namespace TinyGPS
         void processNewUbxPacket(const Ubx &ubx);
         void tryParseSentence();
         void tryParseUbxPacket();
-        void discardCharacter(byte c);
+        void discardCharacters();
         static void parseStream(void *pvParameters);
         void end()
         {

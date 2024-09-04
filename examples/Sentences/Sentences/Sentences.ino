@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <TinyGPSAsync.h>
+#include <set>
 
 TinyGPSAsync gps;
 
@@ -12,8 +13,9 @@ TinyGPSAsync gps;
 void setup()
 {
   Serial.begin(115200);
+  GPSSerial.setRxBufferSize(20000);
   GPSSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-
+ 
   delay(2000); // Allow ESP32 serial to initialize
 
   Serial.println("Sentences.ino");
@@ -27,11 +29,13 @@ void setup()
 // and then the latest GGA sentence
 void loop()
 {
+#if false
   if (gps.NewUbxPacketAvailable())
   {
+    static int count17 = 0;
     auto & packet = gps.GetUbxPackets().LastUbxPacket.Packet();
-    Serial.printf("UBX Sync:[%02X,%02X] Class: %02X Id: %02X Chksum:[%02X,%02X] Payload: ", 
-      packet.sync[0], packet.sync[1], packet.clss, packet.id, packet.chksum[0], packet.chksum[1]);
+//    Serial.printf("UBX Sync:[%02X,%02X] Class: %02X Id: %02X Chksum:[%02X,%02X] Payload: ", 
+//      packet.sync[0], packet.sync[1], packet.clss, packet.id, packet.chksum[0], packet.chksum[1]);
     for (int i=0; i<10 && i<packet.payload.size(); ++i)
       Serial.printf("%02X ", packet.payload[i]);
     if (packet.clss == 1 && packet.id == 7)
@@ -46,23 +50,36 @@ void loop()
       uint8_t sats = packet.payload[23];
       double lat = *(int32_t *)&packet.payload[28] / 1e7;
       double lng = *(int32_t *)&packet.payload[24] / 1e7;
-      Serial.printf("%02d:%02d:%02d.%09d %02d-%02d-%04d %2.8f %2.8f sats=%d", hour, minute, second, ns, day, month, year, lat, lng, sats);
+      ++count17;
+      Serial.printf("%02d:%02d:%02d.%09d %02d-%02d-%04d %2.8f %2.8f sats=%d Hz=%.1f    \r", hour, minute, second, ns, day, month, year, lat, lng, sats, 1000.0 * count17 / millis());
     }
-    Serial.println();
+    auto & packets = gps.GetUbxPackets().AllUbxPackets;
+//    for (auto kvp : packets)
+//      Serial.print(string("PACKET!) " + kvp.second.String() + "   ").c_str());
+//    Serial.println();
   }
-
-#if false
+#endif
+#if true
+  
+  static set<string> talkers;
   if (gps.NewSentenceAvailable())
   {
     auto & sentences = gps.GetSentences();
     Serial.print("Sentence IDs seen: ");
     for (auto s:sentences.AllSentences)
         Serial.printf("%s ", s.second.SentenceId().c_str());
-    Serial.println();
-    delay(1000);
-    auto gga = sentences["GGA"].String();
-    Serial.printf("Latest GGA sentence: %s\n", gga.c_str());
-    delay(5000);
+    Serial.print("    Talker IDs seen: ");
+    for (auto s:sentences.AllSentences)
+      talkers.insert(s.second.TalkerId());
+    for (auto talker:talkers)
+        Serial.printf("%s ", talker.c_str());
+    
+    auto & snapshot = gps.GetSnapshot();
+    Serial.printf("    SATS = %d                  \r", snapshot.SatelliteCount.Value());
+    
+//    delay(1000);
+//    auto gga = sentences["GGA"].String();
+//    Serial.printf("      Latest GGA sentence: %s\r", gga.c_str());
   }
 #endif
 }

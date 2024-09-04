@@ -1,6 +1,6 @@
 {
   "name": "TinyGPSAsync",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "keywords": "gps,GNSS,NMEA,ESP32",
   "description": "A multi-threaded NMEA parser for ESP32",
   "repository":
