@@ -18,7 +18,7 @@
 #define WARMRESETBYTES "$PMTK102*31\r\n"
 #define HOTRESETBYTES  "$PMTK101*32\r\n"
 #define isValidDateTime(d, t) (d.Year() != 2080 || d.Month() != 1)
-#elif false // Quescan M10FD
+#elif true // Quescan M10FD
 #define GPSNAME "Quescan M10FD"
 #define RX D1
 #define TX D0
@@ -63,10 +63,10 @@ void setup()
   digitalWrite(LED_BUILTIN, HIGH);
 #endif
 
+  Serial1.setRxBufferSize(20000);
   Serial1.begin(GPSBAUD, SERIAL_8N1, RX, TX);
 #if defined(INITIALSTART)
 {
-//    delay(2000);
     for (auto ch: INITIALSTART)
         Serial1.write(ch);
 }
@@ -144,25 +144,15 @@ void loop()
     // Cold reset
     Serial.println();
     Serial.println("*** Cold reset ***                                                                                          ");
-
-    for (byte c: COLDRESETBYTES)
-      Serial1.write(c);
-//    delay(1000);
-    Doit(1);
+    Doit(1, COLDRESETBYTES);
 
     Serial.println();
     Serial.println("*** Warm reset ***                                                                                           ");
-    for (byte c: WARMRESETBYTES)
-      Serial1.write(c);
-//    delay(1000);
-    Doit(2);
+    Doit(2, WARMRESETBYTES);
 
     Serial.println();
     Serial.println("*** Hot reset ***                                                                                           ");
-    for (byte c: HOTRESETBYTES)
-      Serial1.write(c);
-//    delay(1000);
-    Doit(3);
+    Doit(3, HOTRESETBYTES);
 
     // Turn off GPS
     digitalWrite(D7, LOW);
@@ -180,10 +170,12 @@ void loop()
         );
 }
 
-void Doit(int count)
+void Doit(int count, std::vector<byte> cmd)
 {
     TinyGPSAsync gps;
     gps.begin(Serial1);
+    for (byte c: cmd)
+      Serial1.write(c);
     
     int startsec = millis() / 1000;
     int seconds = -1;
@@ -191,23 +183,24 @@ void Doit(int count)
     int tt = max, td = max, tl = max, tf = max, ts[4] = {max, max, max, max};
     while ((tl == max || ts[3] == max || td == max || tt == max || tf == max) && seconds - startsec < max)
     {
-esp_task_wdt_reset();
-yield();
-vTaskDelay(1);
-        if (seconds - startsec < 5 && gps.NewSentenceAvailable())
+        if (seconds - startsec < 5)
         {
+            if (gps.NewSentenceAvailable())
+            {
             auto &s = gps.GetSentences();
             if (s.LastSentence.SentenceId() == "TXT")
                 Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, s.LastSentence.ToString().c_str());
-//          if (s.LastSentence.SentenceId() == "RMC")
-//              Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, s.LastSentence.String().c_str());
-//          if (s.LastSentence.SentenceId() == "GGA")
-//              Serial.printf("%03d: %s                                                                  \r", millis() / 1000 - startsec, s.LastSentence.String().c_str());
+            }
+            if (gps.NewUbxPacketAvailable())
+            {
+                auto &p = gps.GetUbxPackets();
+                if (p.LastUbxPacket.Id() != 0x7 && p.LastUbxPacket.Id() != 0x35)
+                    Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, p.LastUbxPacket.ToString().c_str());
+            }
         }
         unsigned long m = millis();
         if (m / 1000 != seconds)
         {
-static int lastgga = -1;
             const Snapshot &ss = gps.GetSnapshot();
             seconds = m / 1000;
             auto t = ss.Time;

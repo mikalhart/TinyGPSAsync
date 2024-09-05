@@ -1,6 +1,7 @@
 #include "TinyGPSAsync.h"
 #include "esp_task_wdt.h"
 
+#define watchdog(C) vTaskDelay(1)
 void TaskSpecific::flushBuffer()
 {
     if (!buffer.empty() && xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -30,7 +31,7 @@ void TaskSpecific::discardCharacters()
         }
         if (millis() - start > 100)
         {
-            esp_task_wdt_reset(),vTaskDelay(1);  // to avoid killing Idle thread watchdog
+            watchdog('D');
             start = millis();
         }
     }
@@ -187,7 +188,7 @@ msg = buf;
         }
         if (millis() - start > 100)
         {
-            esp_task_wdt_reset(), vTaskDelay(1);  // to avoid killing Idle thread watchdog
+            watchdog('S');
             start = millis();
         }
     }
@@ -241,7 +242,7 @@ msg = buf;
         }
         if (millis() - start > 100)
         {
-            esp_task_wdt_reset(), vTaskDelay(1);  // to avoid killing Idle thread watchdog
+            watchdog('P');
             start = millis();
         }
     }
@@ -272,8 +273,7 @@ int availstart = pThis->stream->available();
 //   Serial.printf("%02X: %10s T(ms): %3lu   availstart: %5lu\n", c, msg.c_str(), (unsigned)(millis() - start), availstart, pThis->stream->available() - availstart);
         }
 
-        esp_task_wdt_reset();
-        vTaskDelay(1);  // to avoid killing Idle thread watchdog
+        watchdog('G');
     }
     vTaskDelete(NULL);
 }

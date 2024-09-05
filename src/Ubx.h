@@ -43,7 +43,7 @@ namespace TinyGPS
         const Ubx &Packet() const       { return ubx; }
 
         static ParsedUbxPacket FromUbx(const Ubx &ubx);
-        string String() const;
+        string ToString() const;
     };
 
     struct UbxPackets

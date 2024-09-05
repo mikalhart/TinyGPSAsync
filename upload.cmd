@@ -3,7 +3,7 @@ setlocal
 
 :: Check if a parameter is provided; if not, use default value
 if "%~1"=="" (
-    set "SketchName=Sentences.ino"
+    set "SketchName=TTF.ino"
 ) else (
     set "SketchName=%~1"
 )

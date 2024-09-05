@@ -111,7 +111,7 @@ string ParsedSentence::ToString() const
     return str;
 }
 
-string ParsedUbxPacket::String() const
+string ParsedUbxPacket::ToString() const
 {
     char buf[100];
     sprintf(buf, "UBX: Class=%d Id=%d Len=%d Chksum=%x.%x (%s)\n", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
@@ -196,6 +196,8 @@ void TinyGPSAsync::syncStatistics()
             statistics.invalidSentenceCount += task.Counters.invalidSentenceCount;
             statistics.ggaCount += task.Counters.ggaCount;
             statistics.rmcCount += task.Counters.rmcCount;
+            statistics.ubx153Count += task.Counters.ubx153Count;
+            statistics.ubx17Count += task.Counters.ubx17Count;
             task.Counters.clear();
             xSemaphoreGive(task.gpsMutex);
         }
