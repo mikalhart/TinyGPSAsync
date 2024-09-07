@@ -18,7 +18,7 @@
 #define WARMRESETBYTES "$PMTK102*31\r\n"
 #define HOTRESETBYTES  "$PMTK101*32\r\n"
 #define isValidDateTime(d, t) (d.Year() != 2080 || d.Month() != 1)
-#elif true // Quescan M10FD
+#elif false // Quescan M10FD    
 #define GPSNAME "Quescan M10FD"
 #define RX D1
 #define TX D0
@@ -176,28 +176,30 @@ void Doit(int count, std::vector<byte> cmd)
     gps.begin(Serial1);
     for (byte c: cmd)
       Serial1.write(c);
-    
+
+    for (unsigned long start = millis(); millis() - start < 3000;)
+    {
+        if (gps.NewSentenceAvailable())
+        {
+            auto &s = gps.GetSentences();
+            if (s.LastSentence.SentenceId() == "TXT")
+                Serial.printf("%03d: %s                                                                  \n", (millis() - start) / 1000, s.LastSentence.ToString().c_str());
+        }
+        if (gps.NewUbxPacketAvailable())
+        {
+            auto &p = gps.GetUbxPackets();
+            if (p.LastUbxPacket.Id() != 0x7 && p.LastUbxPacket.Id() != 0x35)
+                Serial.printf("%03d: %s                                                                  \n", (millis() - start) / 1000, p.LastUbxPacket.ToString().c_str());
+        }
+    }
+
+
     int startsec = millis() / 1000;
     int seconds = -1;
     int max = count == 1 ? 3000 : 300;
     int tt = max, td = max, tl = max, tf = max, ts[4] = {max, max, max, max};
     while ((tl == max || ts[3] == max || td == max || tt == max || tf == max) && seconds - startsec < max)
     {
-        if (seconds - startsec < 5)
-        {
-            if (gps.NewSentenceAvailable())
-            {
-            auto &s = gps.GetSentences();
-            if (s.LastSentence.SentenceId() == "TXT")
-                Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, s.LastSentence.ToString().c_str());
-            }
-            if (gps.NewUbxPacketAvailable())
-            {
-                auto &p = gps.GetUbxPackets();
-                if (p.LastUbxPacket.Id() != 0x7 && p.LastUbxPacket.Id() != 0x35)
-                    Serial.printf("%03d: %s                                                                  \n", millis() / 1000 - startsec, p.LastUbxPacket.ToString().c_str());
-            }
-        }
         unsigned long m = millis();
         if (m / 1000 != seconds)
         {
@@ -211,8 +213,8 @@ void Doit(int count, std::vector<byte> cmd)
             auto & stats = gps.GetStatistics();
             char timestring[] = "  :  :  ";
             char datestring[] = "  -  -    ";
-            char latstring[] = "          ";
-            char lngstring[] = "           ";
+            char latstring[] = "[   lat   ]";
+            char lngstring[] = "[   lng   ]";
             if (!t.IsVoid())
                 sprintf(timestring, "%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second());
             if (!d.IsVoid())
@@ -222,9 +224,9 @@ void Doit(int count, std::vector<byte> cmd)
                 sprintf(latstring, "% 2.6f", l.Lat());
                 sprintf(lngstring, "% 3.6f", l.Lng());
             }
-            Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d UBX17=%d Diags=%d\r", seconds - startsec,
+            Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d UBX.Pvt=%d Diags=%d\r", seconds - startsec,
                 datestring, timestring, latstring, lngstring, f.Value(), s.Value(),
-                stats.ggaCount, stats.rmcCount, stats.ubx17Count, gps.DiagnosticCode());
+                stats.ggaCount, stats.rmcCount, stats.ubxNavPvtCount, gps.DiagnosticCode());
             if (tt == max && !t.IsVoid() && isValidDateTime(d, t))
             {
                 Serial.printf("%03d: Got Time (%02d:%02d:%02d)                                                                                      \n", seconds - startsec, t.Hour(), t.Minute(), t.Second());

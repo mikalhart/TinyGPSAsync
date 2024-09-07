@@ -57,6 +57,22 @@ namespace TinyGPS
                     RawLng.parseDegrees(termLng.c_str(), EW.c_str());
                 }
             }
+            void set(int32_t lat, int32_t lng, uint32_t timestamp)
+            {
+                stampIt(timestamp);
+                isVoid = false;
+                if (RawLat.negative = lat < 0) lat = -lat;
+                if (RawLng.negative = lng < 0) lng = -lng;
+                RawLat.billionths = 100 * (lat % 10000000);
+                RawLng.billionths = 100 * (lng % 10000000);
+                RawLat.deg = lat / 10000000;
+                RawLng.deg = lng / 10000000;
+            }
+            void clear(uint32_t timestamp)
+            {
+                stampIt(timestamp);
+                isVoid = true;
+            }
         public:
             double Lat() const
             {
@@ -123,13 +139,6 @@ namespace TinyGPS
             uint32_t Value() const { isNew = false; return v; }
         };
 
-        struct DateItem : public IntegerItem
-        {
-            uint16_t Year() const { isNew = false; return v % 100 + 2000; }
-            uint8_t Month() const { isNew = false; return (v / 100) % 100; }
-            uint8_t Day() const   { isNew = false; return v / 10000; }
-        };
-
         struct DecimalItem : public Item
         {
             friend class TinyGPSAsync;
@@ -140,17 +149,87 @@ namespace TinyGPS
             int32_t Value() const { isNew = false; return v; }
         };
 
+        struct DateItem : public Item
+        {
+            uint16_t Year() const { isNew = false; return m_year; }
+            uint8_t Month() const { isNew = false; return m_month; }
+            uint8_t Day() const   { isNew = false; return m_day; }
+
+            friend class TinyGPSAsync;
+        private:
+            uint16_t m_year;
+            uint8_t m_month;
+            uint8_t m_day;
+            
+            void set(uint16_t year, uint8_t month, uint8_t day, uint32_t timestamp) 
+            { 
+                stampIt(timestamp);
+                isVoid = false;
+                m_year = year;
+                m_month = month;
+                m_day = day;
+            }
+
+            void clear(uint32_t timestamp) 
+            { 
+                stampIt(timestamp);
+                isVoid = true;
+            }
+
+            void parse(const string &term, uint32_t timestamp) 
+            {
+                stampIt(timestamp);
+                isVoid = term.empty();
+                if (!isVoid)
+                {
+                    uint32_t v = atol(term.c_str());
+                    m_year = 2000 + v % 100;
+                    m_month = (v / 100) % 100;
+                    m_day = v / 10000;
+                }
+            }
+        };
+
         struct TimeItem : public DecimalItem
         {
-            uint8_t Hour() const        { isNew = false; return v / 1000000; }
-            uint8_t Minute() const      { isNew = false; return (v / 10000) % 100; }
-            uint8_t Second() const      { isNew = false; return (v / 100) % 100; }
-            uint8_t Centisecond() const { isNew = false; return v % 100; }
-            static TimeItem FromTime(uint8_t hour, uint8_t minute, uint8_t second, uint8_t centisecond)
+            uint8_t Hour() const        { isNew = false; return m_hour; }
+            uint8_t Minute() const      { isNew = false; return m_minute; }
+            uint8_t Second() const      { isNew = false; return m_second; }
+            uint32_t Nanos() const { isNew = false; return m_nanos; }
+
+            friend class TinyGPSAsync;
+        private:
+            uint8_t m_hour;
+            uint8_t m_minute;
+            uint8_t m_second;
+            uint32_t m_nanos;
+            
+            void set(uint8_t hour, uint8_t minute, uint8_t second, uint32_t nanos, uint32_t timestamp) 
+            { 
+                stampIt(timestamp);
+                isVoid = false;
+                m_hour = hour;
+                m_minute = minute;
+                m_second = second;
+                m_nanos = nanos;
+            }
+
+            void clear(uint32_t timestamp) 
+            { 
+                stampIt(timestamp);
+                isVoid = true;
+            }
+
+            void parse(const string &term, uint32_t timestamp) 
             {
-                TimeItem ti;
-                ti.v = hour * 1000000 + minute * 10000 + second * 100 + centisecond;
-                return ti;
+                DecimalItem::parse(term, timestamp);
+                if (!isVoid)
+                {
+                    m_hour = v / 1000000;
+                    m_minute = (v / 10000) % 100;
+                    m_second = (v / 100) % 100;
+                    m_nanos = 10000000 * (v % 100);
+                }
             }
         };
 

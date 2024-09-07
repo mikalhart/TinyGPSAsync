@@ -164,19 +164,57 @@ void TinyGPSAsync::processRMC(const ParsedSentence &sentence)
     snapshot.Date.parse(sentence[9], timestamp);
 }
 
-void TinyGPSAsync::processUbx17(const ParsedUbxPacket &pu)
+void TinyGPSAsync::processUbxNavPvt(const ParsedUbxPacket &pu)
 {
     auto & payload = pu.Packet().payload;
     auto timestamp = pu.Timestamp();
-    byte validityFlags = payload[11];
-    if (validityFlags & 0x1) // date valid
+    if (payload.size() == 92)
     {
+        byte validityFlags = payload[11];
+        byte flagsFlags = payload[21];
+        if (validityFlags & 0x1) // date valid
+        {
+            uint16_t year = makeU16(payload[4], payload[5]);
+            uint8_t month = payload[6];
+            uint8_t day = payload[7];
+            snapshot.Date.set(year, month, day, timestamp);
+        }
+        else
+        {
+            snapshot.Date.clear(timestamp);
+        }
 
-    }
+        if (validityFlags & 0x2) // time valid
+        {
+            uint8_t hour = payload[8];
+            uint8_t minute = payload[9];
+            uint8_t second = payload[10];
+            uint32_t nanos = makeU32(payload[16], payload[17], payload[18], payload[19]);
+            snapshot.Time.set(hour, minute, second, nanos, timestamp);
+        }
+        else
+        {
+            snapshot.Time.clear(timestamp);
+        }
 
-    if (validityFlags & 0x2) // time valid
-    {
-//        snapshot.Time = Snapshot::TimeItem::FromTime(payload[8], payload[9], payload[10], 0);
+        if (flagsFlags & 0x1) // location fix valid
+        {
+            int32_t lat = (int32_t)makeU32(payload[28], payload[29], payload[30], payload[31]);
+            int32_t lng = (int32_t)makeU32(payload[24], payload[25], payload[26], payload[27]);
+            snapshot.Location.set(lat, lng, timestamp);
+        }
+        else
+        {
+            snapshot.Location.clear(timestamp);
+        }
+
+        // Quality
+        // Sat count
+        // HDOP
+        // Altitude
+        // Fix status
+        // Speed
+        // Course
     }
 }
 
@@ -197,7 +235,7 @@ void TinyGPSAsync::syncStatistics()
             statistics.ggaCount += task.Counters.ggaCount;
             statistics.rmcCount += task.Counters.rmcCount;
             statistics.ubx153Count += task.Counters.ubx153Count;
-            statistics.ubx17Count += task.Counters.ubx17Count;
+            statistics.ubxNavPvtCount += task.Counters.ubxNavPvtCount;
             task.Counters.clear();
             xSemaphoreGive(task.gpsMutex);
         }
@@ -302,7 +340,7 @@ void TinyGPSAsync::syncSnapshot()
         {
             if (kvp.second.ChecksumValid())
             {
-                processUbx17(kvp.second);
+                processUbxNavPvt(kvp.second);
             }
         }
         task.hasNewSnapshot = false;

@@ -50,7 +50,9 @@ namespace TinyGPS
         void syncSnapshot();
         void processGGA(const ParsedSentence &sentence);
         void processRMC(const ParsedSentence &sentence);
-        void processUbx17(const ParsedUbxPacket &pu);
+        void processUbxNavPvt(const ParsedUbxPacket &pu);
+        uint16_t makeU16(uint8_t lo, uint8_t hi) { return lo + (hi << 8); }
+        uint32_t makeU32(uint8_t lo0, uint8_t lo1, uint8_t lo2, uint8_t hi) { return lo0 + (lo1 << 8) + (lo2 << 16) + (hi << 24); }
 
     public:
         void end()

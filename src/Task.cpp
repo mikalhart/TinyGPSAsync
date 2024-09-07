@@ -59,7 +59,7 @@ void TaskSpecific::processNewUbxPacket(const Ubx &ubx)
                 hasNewUbxPackets = true;
                 if (id == "1.7")
                 {
-                    ++Counters.ubx17Count;
+                    ++Counters.ubxNavPvtCount;
                     SnapshotUbxPackets[id] = pu;
                 }
                 else if (id == "1.53")

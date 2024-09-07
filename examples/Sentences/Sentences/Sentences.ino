@@ -32,7 +32,7 @@ void loop()
 #if false
   if (gps.NewUbxPacketAvailable())
   {
-    static int count17 = 0;
+    static int countPvt = 0;
     auto & packet = gps.GetUbxPackets().LastUbxPacket.Packet();
 //    Serial.printf("UBX Sync:[%02X,%02X] Class: %02X Id: %02X Chksum:[%02X,%02X] Payload: ", 
 //      packet.sync[0], packet.sync[1], packet.clss, packet.id, packet.chksum[0], packet.chksum[1]);
@@ -50,7 +50,7 @@ void loop()
       uint8_t sats = packet.payload[23];
       double lat = *(int32_t *)&packet.payload[28] / 1e7;
       double lng = *(int32_t *)&packet.payload[24] / 1e7;
-      ++count17;
+      ++countPvt;
       Serial.printf("%02d:%02d:%02d.%09d %02d-%02d-%04d %2.8f %2.8f sats=%d Hz=%.1f    \r", hour, minute, second, ns, day, month, year, lat, lng, sats, 1000.0 * count17 / millis());
     }
     auto & packets = gps.GetUbxPackets().AllUbxPackets;
