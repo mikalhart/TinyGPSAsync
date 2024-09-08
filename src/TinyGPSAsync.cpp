@@ -114,7 +114,7 @@ string ParsedSentence::ToString() const
 string ParsedUbxPacket::ToString() const
 {
     char buf[100];
-    sprintf(buf, "UBX: Class=%d Id=%d Len=%d Chksum=%x.%x (%s)\n", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
+    sprintf(buf, "UBX: Class=%x Id=%x Len=%d Chksum=%x.%x (%s)", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
     return buf;
 }
 
@@ -137,7 +137,10 @@ ParsedUbxPacket ParsedUbxPacket::FromUbx(const Ubx &ubx)
         updateChecksum(ck_A, ck_B, ubx.payload[i]);
     u.checksumValid = ck_A == ubx.chksum[0] && ck_B == ubx.chksum[1];
 if (!u.checksumValid)
-Serial.printf("\n\nExpected %02X:%02X got %02X:%02X\n\n", ubx.chksum[0], ubx.chksum[1], ck_A, ck_B);
+{
+    Serial.printf("\n\n%s\n", u.ToString().c_str());
+    Serial.printf("Expected %02X:%02X got %02X:%02X\n\n", ubx.chksum[0], ubx.chksum[1], ck_A, ck_B);
+}
     u.ubx = ubx;
     return u;
 }
@@ -189,7 +192,7 @@ void TinyGPSAsync::processUbxNavPvt(const ParsedUbxPacket &pu)
             uint8_t hour = payload[8];
             uint8_t minute = payload[9];
             uint8_t second = payload[10];
-            uint32_t nanos = makeU32(payload[16], payload[17], payload[18], payload[19]);
+            int32_t nanos = makeI32(payload[16], payload[17], payload[18], payload[19]);
             snapshot.Time.set(hour, minute, second, nanos, timestamp);
         }
         else
@@ -199,8 +202,8 @@ void TinyGPSAsync::processUbxNavPvt(const ParsedUbxPacket &pu)
 
         if (flagsFlags & 0x1) // location fix valid
         {
-            int32_t lat = (int32_t)makeU32(payload[28], payload[29], payload[30], payload[31]);
-            int32_t lng = (int32_t)makeU32(payload[24], payload[25], payload[26], payload[27]);
+            int32_t lat = makeI32(payload[28], payload[29], payload[30], payload[31]);
+            int32_t lng = makeI32(payload[24], payload[25], payload[26], payload[27]);
             snapshot.Location.set(lat, lng, timestamp);
         }
         else
@@ -421,9 +424,9 @@ TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
     return OK;
 }
 
-std::string TinyGPSAsync::DiagnosticString()
+const char *TinyGPSAsync::DiagnosticString()
 {
-    static std::map<TinyGPSAsync::Status, std::string> myMap =
+    static std::map<TinyGPSAsync::Status, const char *> myMap =
     {
         { STREAM, "Parser not started" },
         { WIRING, "Possible wiring issue" },

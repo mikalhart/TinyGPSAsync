@@ -21,18 +21,18 @@ namespace TinyGPS
         /// @brief Diagnostic Code
         enum Status {OK = 0, STREAM, WIRING, BAUD, OVERFLOW, MISSING };
         Status DiagnosticCode();
-        string DiagnosticString();
+        const char *DiagnosticString();
 
-        const Snapshot &GetSnapshot() { syncSnapshot(); return snapshot; }
+        const Snapshot &GetSnapshot()     { syncSnapshot(); return snapshot; }
         const Satellites &GetSatellites() { syncSatellites(); return satellites;}
-        const Sentences &GetSentences() { syncSentences(); return sentences; }
+        const Sentences &GetSentences()   { syncSentences(); return sentences; }
         const UbxPackets &GetUbxPackets() { syncUbxPackets(); return ubxPackets; }
         const Statistics &GetStatistics() { syncStatistics(); return statistics; }
-        bool NewSnapshotAvailable() { return task.hasNewSnapshot; }
-        bool NewSentenceAvailable() { return task.hasNewSentences; }
-        bool NewUbxPacketAvailable() { return task.hasNewUbxPackets; }
-        bool NewCharactersAvailable() { return task.hasNewCharacters; }
-        bool NewSatellitesAvailable() { return task.hasNewSatellites; }
+        bool NewSnapshotAvailable()       { return task.hasNewSnapshot; }
+        bool NewSatellitesAvailable()     { return task.hasNewSatellites; }
+        bool NewSentenceAvailable()       { return task.hasNewSentences; }
+        bool NewUbxPacketAvailable()      { return task.hasNewUbxPackets; }
+        bool NewCharactersAvailable()     { return task.hasNewCharacters; }
 
     private:
         uint32_t startTime;
@@ -52,7 +52,7 @@ namespace TinyGPS
         void processRMC(const ParsedSentence &sentence);
         void processUbxNavPvt(const ParsedUbxPacket &pu);
         uint16_t makeU16(uint8_t lo, uint8_t hi) { return lo + (hi << 8); }
-        uint32_t makeU32(uint8_t lo0, uint8_t lo1, uint8_t lo2, uint8_t hi) { return lo0 + (lo1 << 8) + (lo2 << 16) + (hi << 24); }
+        int32_t makeI32(uint8_t lo0, uint8_t lo1, uint8_t lo2, uint8_t hi) { return lo0 + (lo1 << 8) + (lo2 << 16) + (hi << 24); }
 
     public:
         void end()

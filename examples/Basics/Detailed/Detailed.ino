@@ -4,9 +4,9 @@
 TinyGPSAsync gps;
 
 /* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN D0
-#define GPS_TX_PIN D1
-#define GPS_BAUD 9600
+#define GPS_RX_PIN D1
+#define GPS_TX_PIN D0
+#define GPS_BAUD 115200
 #define GPSSerial Serial1
 
 void setup()
@@ -82,7 +82,7 @@ void loop()
     Serial.printf(" %c   %c    %02d   %5.1f %10s %11s  %03s %02d-%02d-%04d %02d:%02d:%02d %03s %7s %6s %6s %4s  %8s %5s %4s   %8d   %9d %8d      %1d %s\n",
       fix, qual, satcount, hdop, lat.c_str(), lng.c_str(), locage >= 1000 ? "^^^" : tostring(locage, 3).c_str(), date.Day(), date.Month(), date.Year(), time.Hour(), time.Minute(), time.Second(),
           dateage >= 1000 ? "^^^" : tostring(dateage, 3).c_str(), altstr.c_str(), crsstr.c_str(), spdstr.c_str(), gps.Cardinal(course), londond.c_str(), londonc.c_str(), londoncd.c_str(),
-      stats.encodedCharCount, stats.validSentenceCount, stats.failedChecksumCount, gps.DiagnosticCode(), gps.DiagnosticString().c_str());
+      stats.encodedCharCount, stats.validSentenceCount, stats.failedChecksumCount, gps.DiagnosticCode(), gps.DiagnosticString());
     delay(1000);
   }
 }

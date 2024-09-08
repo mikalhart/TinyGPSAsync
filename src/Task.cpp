@@ -1,7 +1,6 @@
 #include "TinyGPSAsync.h"
 #include "esp_task_wdt.h"
 
-#define watchdog(C) vTaskDelay(1)
 void TaskSpecific::flushBuffer()
 {
     if (!buffer.empty() && xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -31,7 +30,7 @@ void TaskSpecific::discardCharacters()
         }
         if (millis() - start > 100)
         {
-            watchdog('D');
+            vTaskDelay(1);
             start = millis();
         }
     }
@@ -169,7 +168,7 @@ void TaskSpecific::tryParseSentence()
                     string nmea = buffer.substr(0, buffer.length() - 2);
                     processNewSentence(nmea);
 char buf[100];
-sprintf(buf, "SENT %d", buffer.size());
+sprintf(buf, "SENT %s %d", nmea.substr(0, 40).c_str(), buffer.size());
 msg = buf;
 
                     buffer.clear();
@@ -188,7 +187,7 @@ msg = buf;
         }
         if (millis() - start > 100)
         {
-            watchdog('S');
+            vTaskDelay(1);
             start = millis();
         }
     }
@@ -234,7 +233,7 @@ void TaskSpecific::tryParseUbxPacket()
                 ubx.chksum[1] = buffer[6 + payloadLen + 1];
                 processNewUbxPacket(ubx);
 char buf[100];
-sprintf(buf, "UBX  %d", buffer.size());
+sprintf(buf, "UBX  (%x:%x) %d", ubx.clss, ubx.id, buffer.size());
 msg = buf;
                 buffer.clear();
                 break;
@@ -242,7 +241,7 @@ msg = buf;
         }
         if (millis() - start > 100)
         {
-            watchdog('P');
+            vTaskDelay(1);
             start = millis();
         }
     }
@@ -273,7 +272,7 @@ int availstart = pThis->stream->available();
 //   Serial.printf("%02X: %10s T(ms): %3lu   availstart: %5lu\n", c, msg.c_str(), (unsigned)(millis() - start), availstart, pThis->stream->available() - availstart);
         }
 
-        watchdog('G');
+        vTaskDelay(1);
     }
     vTaskDelete(NULL);
 }

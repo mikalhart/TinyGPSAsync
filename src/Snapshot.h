@@ -195,16 +195,16 @@ namespace TinyGPS
             uint8_t Hour() const        { isNew = false; return m_hour; }
             uint8_t Minute() const      { isNew = false; return m_minute; }
             uint8_t Second() const      { isNew = false; return m_second; }
-            uint32_t Nanos() const { isNew = false; return m_nanos; }
+            int32_t Nanos() const       { isNew = false; return m_nanos; }
 
             friend class TinyGPSAsync;
         private:
             uint8_t m_hour;
             uint8_t m_minute;
             uint8_t m_second;
-            uint32_t m_nanos;
+            int32_t m_nanos;
             
-            void set(uint8_t hour, uint8_t minute, uint8_t second, uint32_t nanos, uint32_t timestamp) 
+            void set(uint8_t hour, uint8_t minute, uint8_t second, int32_t nanos, uint32_t timestamp) 
             { 
                 stampIt(timestamp);
                 isVoid = false;

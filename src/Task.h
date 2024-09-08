@@ -14,6 +14,7 @@ namespace TinyGPS
         std::atomic<bool> hasNewSatellites;
         std::atomic<bool> hasNewSentences;
         std::atomic<bool> hasNewUbxPackets;
+        std::atomic<bool> hasNewUnknownPacket;
         std::atomic<bool> hasNewSnapshot;
         std::atomic<bool> taskActive;
 

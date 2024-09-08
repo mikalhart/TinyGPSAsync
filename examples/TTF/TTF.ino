@@ -18,11 +18,12 @@
 #define WARMRESETBYTES "$PMTK102*31\r\n"
 #define HOTRESETBYTES  "$PMTK101*32\r\n"
 #define isValidDateTime(d, t) (d.Year() != 2080 || d.Month() != 1)
-#elif false // Quescan M10FD    
+#elif true // Quescan M10FD    
 #define GPSNAME "Quescan M10FD"
 #define RX D1
 #define TX D0
-#define GPSBAUD 115200
+#define GPSBAUD 38400
+#define FACTORYRESETBYTES { 0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x02, 0x1A, 0x0A }
 #define COLDRESETBYTES {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0xFF, 0x02, 0x00, 0x0E, 0x61}
 #define WARMRESETBYTES {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x01, 0x00, 0x02, 0x00, 0x11, 0x6C}
 #define HOTRESETBYTES  {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00, 0x02, 0x00, 0x10, 0x68}
@@ -65,6 +66,17 @@ void setup()
 
   Serial1.setRxBufferSize(20000);
   Serial1.begin(GPSBAUD, SERIAL_8N1, RX, TX);
+
+#if false
+while (true)
+{
+    if (Serial1.available())
+        Serial.write(Serial1.read());
+    if (Serial.available())
+        Serial1.write(Serial.read());
+}
+#endif
+
 #if defined(INITIALSTART)
 {
     for (auto ch: INITIALSTART)
@@ -224,9 +236,9 @@ void Doit(int count, std::vector<byte> cmd)
                 sprintf(latstring, "% 2.6f", l.Lat());
                 sprintf(lngstring, "% 3.6f", l.Lng());
             }
-            Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d UBX.Pvt=%d Diags=%d\r", seconds - startsec,
+            Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d UBX.Pvt=%d Diags=%s\r", seconds - startsec,
                 datestring, timestring, latstring, lngstring, f.Value(), s.Value(),
-                stats.ggaCount, stats.rmcCount, stats.ubxNavPvtCount, gps.DiagnosticCode());
+                stats.ggaCount, stats.rmcCount, stats.ubxNavPvtCount, gps.DiagnosticString());
             if (tt == max && !t.IsVoid() && isValidDateTime(d, t))
             {
                 Serial.printf("%03d: Got Time (%02d:%02d:%02d)                                                                                      \n", seconds - startsec, t.Hour(), t.Minute(), t.Second());
