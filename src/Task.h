@@ -22,16 +22,19 @@ namespace TinyGPS
         ParsedSentence LastSentence;
         std::map<string, ParsedSentence> NewSentences;
         std::map<string, ParsedSentence> SnapshotSentences;
+
         ParsedUbxPacket LastUbxPacket;
         std::map<string, ParsedUbxPacket> NewUbxPackets;
         std::map<string, ParsedUbxPacket> SnapshotUbxPackets;
+
+        std::vector<uint8_t> LastUnknownPacket;
 
         Statistics Counters;
         vector<SatInfo> AllSatellites;
         string SatelliteTalkerId;
 
     private:
-        string buffer;
+        vector<uint8_t> buffer;
 
         /* Internal items (not guarded) */
         vector<SatInfo> SatelliteBuffer;
@@ -44,16 +47,17 @@ namespace TinyGPS
             SatelliteTalkerId = "";
             hasNewCharacters = hasNewSatellites = hasNewSentences = hasNewSnapshot = false;
         }
+        void postNewSentence(const string &s);
+        void postNewUbxPacket(const Ubx &ubx);
+        void postNewUnknownPacket();
+        void handleNMEASentence();
+        void handleUbxPacket();
+        void handleUnknownBytes();
+        static void mainLoop(void *pvParameters);
+
     public:
-        const Stream *GetStream() const { return stream; }
         SemaphoreHandle_t gpsMutex = xSemaphoreCreateMutex();
-        void flushBuffer();
-        void processNewSentence(const string &s);
-        void processNewUbxPacket(const Ubx &ubx);
-        void tryParseSentence();
-        void tryParseUbxPacket();
-        void discardCharacters();
-        static void parseStream(void *pvParameters);
+        const Stream *GetStream() const { return stream; }
         void end()
         {
             if (taskActive)
@@ -71,7 +75,7 @@ namespace TinyGPS
             clear();
             taskActive = true;
 
-            xTaskCreatePinnedToCore(parseStream, "GPS Parsing Task", 10000, this, /* tskIDLE_PRIORITY */ uxTaskPriorityGet(NULL), NULL, 0);
+            xTaskCreatePinnedToCore(mainLoop, "GPS Parsing Task", 10000, this, /* tskIDLE_PRIORITY */ uxTaskPriorityGet(NULL), NULL, 0);
 
             return true;
         }

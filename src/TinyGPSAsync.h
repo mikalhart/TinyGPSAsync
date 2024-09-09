@@ -28,11 +28,13 @@ namespace TinyGPS
         const Sentences &GetSentences()   { syncSentences(); return sentences; }
         const UbxPackets &GetUbxPackets() { syncUbxPackets(); return ubxPackets; }
         const Statistics &GetStatistics() { syncStatistics(); return statistics; }
+        const vector<uint8_t> &GetUnknownPacket() { syncUnknownPackets(); return lastUnknownPacket; }
         bool NewSnapshotAvailable()       { return task.hasNewSnapshot; }
         bool NewSatellitesAvailable()     { return task.hasNewSatellites; }
         bool NewSentenceAvailable()       { return task.hasNewSentences; }
         bool NewUbxPacketAvailable()      { return task.hasNewUbxPackets; }
         bool NewCharactersAvailable()     { return task.hasNewCharacters; }
+        bool NewUnknownPacketAvailable()  { return task.hasNewUnknownPacket; }
 
     private:
         uint32_t startTime;
@@ -42,12 +44,14 @@ namespace TinyGPS
         Sentences sentences;
         UbxPackets ubxPackets;
         Statistics statistics;
+        vector<uint8_t> lastUnknownPacket;
 
         void syncStatistics();
         void syncSatellites();
         void syncSentences();
         void syncUbxPackets();
         void syncSnapshot();
+        void syncUnknownPackets();
         void processGGA(const ParsedSentence &sentence);
         void processRMC(const ParsedSentence &sentence);
         void processUbxNavPvt(const ParsedUbxPacket &pu);

@@ -310,6 +310,20 @@ void TinyGPSAsync::syncUbxPackets()
     }
 }
 
+void TinyGPSAsync::syncUnknownPackets()
+{
+    if (task.hasNewUnknownPacket)
+    {
+        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
+        {
+            lastUnknownPacket = task.LastUnknownPacket;
+            xSemaphoreGive(task.gpsMutex);
+        }
+
+        task.hasNewUnknownPacket = false;
+    }
+}
+
 void TinyGPSAsync::syncSnapshot()
 {
     if (task.hasNewSnapshot)

@@ -1,6 +1,7 @@
 #include "TinyGPSAsync.h"
 #include "esp_task_wdt.h"
 
+#if false
 void TaskSpecific::flushBuffer()
 {
     if (!buffer.empty() && xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -11,12 +12,25 @@ void TaskSpecific::flushBuffer()
         xSemaphoreGive(gpsMutex);
     }
 }
+#endif
 
-string msg;
-void TaskSpecific::discardCharacters()
+void TaskSpecific::postNewUnknownPacket()
 {
-    unsigned long start = millis();
-    flushBuffer();
+    if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
+    {
+        Counters.encodedCharCount += buffer.size();
+        hasNewCharacters = true;
+        hasNewUnknownPacket = true;
+        LastUnknownPacket = buffer;
+        buffer.clear();
+
+        xSemaphoreGive(gpsMutex);
+    }
+}
+
+void TaskSpecific::handleUnknownBytes()
+{
+    unsigned long start = Utils::msticks();
     while (true)
     {
         if (stream->available())
@@ -24,23 +38,20 @@ void TaskSpecific::discardCharacters()
             byte c = stream->peek();
             if (c == '$' || c == 0xB5)
                 break;
-            buffer += stream->read();
-            if (buffer.length() == buffer.capacity())
-                flushBuffer();
+            buffer.push_back(stream->read());
+            if (buffer.size() == buffer.capacity())
+                postNewUnknownPacket();
         }
-        if (millis() - start > 100)
+        if (Utils::msticks() - start > 100)
         {
             vTaskDelay(1);
-            start = millis();
+            start = Utils::msticks();
         }
     }
-char buf[100];
-sprintf(buf, "DISC %d", buffer.size());
-msg = buf;
-    flushBuffer();
+    postNewUnknownPacket();
 }
 
-void TaskSpecific::processNewUbxPacket(const Ubx &ubx)
+void TaskSpecific::postNewUbxPacket(const Ubx &ubx)
 {
     ParsedUbxPacket pu = ParsedUbxPacket::FromUbx(ubx);
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -60,6 +71,7 @@ void TaskSpecific::processNewUbxPacket(const Ubx &ubx)
                 {
                     ++Counters.ubxNavPvtCount;
                     SnapshotUbxPackets[id] = pu;
+                    hasNewSnapshot = true;
                 }
                 else if (id == "1.53")
                 {
@@ -79,7 +91,57 @@ void TaskSpecific::processNewUbxPacket(const Ubx &ubx)
     }
 }
 
-void TaskSpecific::processNewSentence(const string &s)
+void TaskSpecific::handleUbxPacket()
+{
+    unsigned long start = Utils::msticks();
+    uint16_t payloadLen = 0;
+    while (true)
+    {
+        if (stream->available())
+        {
+            byte b = stream->read();
+            buffer.push_back(b);
+            bool fail = buffer.size() == buffer.capacity() || (buffer.size() == 2 && b != 0x62);
+            if (fail)
+            {
+                postNewUnknownPacket();
+                break;
+            }
+
+            if (buffer.size() == 6)
+            {
+                payloadLen = 0x100 * (byte)buffer[5] + (byte)buffer[4];
+                if (payloadLen > 10000)
+                {
+                    postNewUnknownPacket();
+                    break;
+                }
+            }
+            
+            if (buffer.size() == 6 + payloadLen + 2)
+            {
+                Ubx ubx;
+                ubx.sync[0] = buffer[0];
+                ubx.sync[1] = buffer[1];
+                ubx.clss = buffer[2];
+                ubx.id = buffer[3];
+                ubx.payload = std::vector<uint8_t>(buffer.begin() + 6, buffer.begin() + 6 + payloadLen);
+                ubx.chksum[0] = buffer[6 + payloadLen];
+                ubx.chksum[1] = buffer[6 + payloadLen + 1];
+                postNewUbxPacket(ubx);
+                buffer.clear();
+                break;
+            }
+        }
+        if (Utils::msticks() - start > 100)
+        {
+            vTaskDelay(1);
+            start = Utils::msticks();
+        }
+    }
+}
+
+void TaskSpecific::postNewSentence(const string &s)
 {
     ParsedSentence ps = ParsedSentence::FromString(s);
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -151,125 +213,62 @@ void TaskSpecific::processNewSentence(const string &s)
     }
 }
 
-void TaskSpecific::tryParseSentence()
+void TaskSpecific::handleNMEASentence()
 {
-    unsigned long start = millis();
-    flushBuffer();
+    unsigned long start = Utils::msticks();
     while (true)
     {
         if (stream->available())
         {
             char c = stream->read();
-            buffer += c;
+            buffer.push_back((uint8_t)c);
             if (c == '\n')
             {
-                if (buffer.length() >= 2 && buffer[buffer.length() - 2] == '\r')
+                if (buffer.size() >= 2 && buffer[buffer.size() - 2] == (uint8_t)'\r')
                 {
-                    string nmea = buffer.substr(0, buffer.length() - 2);
-                    processNewSentence(nmea);
-char buf[100];
-sprintf(buf, "SENT %s %d", nmea.substr(0, 40).c_str(), buffer.size());
-msg = buf;
-
+                    string nmea(buffer.begin(), buffer.end() - 2);
+                    postNewSentence(nmea);
                     buffer.clear();
                     break;
                 }
+                postNewUnknownPacket();
                 Serial.printf("*** Sentence error: no carriage return\n");
-                flushBuffer();
                 break;
             }
-            if (buffer.length() == buffer.capacity())
+
+            if (buffer.size() == buffer.capacity())
             {
-                Serial.printf("*** Sentence Error len: %s ***\n", buffer.c_str());
-                flushBuffer();
+                postNewUnknownPacket();
                 break;
             }
         }
-        if (millis() - start > 100)
+        if (Utils::msticks() - start > 100)
         {
             vTaskDelay(1);
-            start = millis();
+            start = Utils::msticks();
         }
     }
 }
 
-void TaskSpecific::tryParseUbxPacket()
-{
-    unsigned long start = millis();
-    flushBuffer();
-    uint16_t payloadLen = 0;
-    while (true)
-    {
-        if (stream->available())
-        {
-            byte b = stream->read();
-            buffer += b;
-            bool fail = buffer.length() == buffer.capacity() || (buffer.length() == 2 && b != 0x62);
-            if (fail)
-            {
-                flushBuffer();
-                break;
-            }
-
-            if (buffer.length() == 6)
-            {
-                payloadLen = 0x100 * (byte)buffer[5] + (byte)buffer[4];
-                if (payloadLen > 10000)
-                {
-                    flushBuffer();
-                    break;
-                }
-            }
-            
-            if (buffer.length() == 6 + payloadLen + 2)
-            {
-                Ubx ubx;
-                ubx.sync[0] = buffer[0];
-                ubx.sync[1] = buffer[1];
-                ubx.clss = buffer[2];
-                ubx.id = buffer[3];
-                ubx.payload = std::vector<uint8_t>(buffer.begin() + 6, buffer.begin() + 6 + payloadLen);
-                ubx.chksum[0] = buffer[6 + payloadLen];
-                ubx.chksum[1] = buffer[6 + payloadLen + 1];
-                processNewUbxPacket(ubx);
-char buf[100];
-sprintf(buf, "UBX  (%x:%x) %d", ubx.clss, ubx.id, buffer.size());
-msg = buf;
-                buffer.clear();
-                break;
-            }
-        }
-        if (millis() - start > 100)
-        {
-            vTaskDelay(1);
-            start = millis();
-        }
-    }
-}
-
-void TaskSpecific::parseStream(void *pvParameters)
+void TaskSpecific::mainLoop(void *pvParameters)
 {
     TaskSpecific *pThis = (TaskSpecific *)pvParameters;
     log_d("gpsTask started");
-    pThis->buffer.reserve(10000);
+    pThis->buffer.reserve(2048);
 
     while (pThis->taskActive)
     {
-unsigned long start = millis();
-int availstart = pThis->stream->available();
         if (pThis->stream->available())
         {
             byte c = pThis->stream->peek();
             if (c == '$')
-                pThis->tryParseSentence();
+                pThis->handleNMEASentence();
             else if (c == 0xB5)
-                pThis->tryParseUbxPacket();
+                pThis->handleUbxPacket();
             else
-                pThis->discardCharacters();
-//if (isprint(c))
-//   Serial.printf(" %c: %10s T(ms): %3lu   availstart: %5lu\n", c, msg.c_str(), (unsigned)(millis() - start), availstart, pThis->stream->available() - availstart);
-//else
-//   Serial.printf("%02X: %10s T(ms): %3lu   availstart: %5lu\n", c, msg.c_str(), (unsigned)(millis() - start), availstart, pThis->stream->available() - availstart);
+                pThis->handleUnknownBytes();
+if (!pThis->buffer.empty())
+Serial.printf("OOPS\n");
         }
 
         vTaskDelay(1);

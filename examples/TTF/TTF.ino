@@ -91,6 +91,33 @@ while (true)
         Serial.write(Serial1.read());
   }
 #endif
+    digitalWrite(D7, HIGH);
+
+    // For 5 seconds, wait for initial messages
+    TinyGPSAsync gps;
+    gps.begin(Serial1);
+
+    while (true)
+    {
+        if (gps.NewUnknownPacketAvailable())
+        {
+            auto &packet = gps.GetUnknownPacket();
+            Serial.printf("UNKNOWN %d - ", packet.size());
+            for (int i=0; i<(packet.size() < 20 ? packet.size() : 20); ++i)
+                Serial.printf("%02X(%c) ", packet[i], isprint(packet[i]) ? packet[i] : '.');
+            Serial.println();
+        }
+        if (gps.NewSentenceAvailable())
+        {
+            auto &sent = gps.GetSentences();
+            Serial.printf("    SENT: %s\n", sent.LastSentence.ToString().c_str());
+        }
+        if (gps.NewUbxPacketAvailable())
+        {
+            auto &ubx = gps.GetUbxPackets();
+            Serial.printf("        UBX: %d.%d %s\n", ubx.LastUbxPacket.Class(), ubx.LastUbxPacket.Id(), ubx.LastUbxPacket.ToString().c_str());
+        }
+    }
 #if false
     std::map<string, int> mymap;
     TinyGPSAsync gps;
