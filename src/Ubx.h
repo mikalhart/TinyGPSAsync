@@ -44,6 +44,7 @@ namespace TinyGPS
 
         static ParsedUbxPacket FromUbx(const Ubx &ubx);
         string ToString() const;
+        vector<uint8_t> ToBuffer() const;
     };
 
     struct UbxPackets

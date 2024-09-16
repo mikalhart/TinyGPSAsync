@@ -1,19 +1,6 @@
 #include "TinyGPSAsync.h"
 #include "esp_task_wdt.h"
 
-#if false
-void TaskSpecific::flushBuffer()
-{
-    if (!buffer.empty() && xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
-    {
-        Counters.encodedCharCount += buffer.length();
-        buffer.clear();
-        hasNewCharacters = true;
-        xSemaphoreGive(gpsMutex);
-    }
-}
-#endif
-
 void TaskSpecific::postNewUnknownPacket()
 {
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -101,17 +88,19 @@ void TaskSpecific::handleUbxPacket()
         {
             byte b = stream->read();
             buffer.push_back(b);
-            bool fail = buffer.size() == buffer.capacity() || (buffer.size() == 2 && b != 0x62);
-            if (fail)
+            if (buffer.size() == buffer.capacity())
             {
                 postNewUnknownPacket();
                 break;
             }
+            
+            if (buffer.size() == 2 && b != 0x62)
+                break;
 
             if (buffer.size() == 6)
             {
                 payloadLen = 0x100 * (byte)buffer[5] + (byte)buffer[4];
-                if (payloadLen > 10000)
+                if (payloadLen >= buffer.capacity() - 8)
                 {
                     postNewUnknownPacket();
                     break;

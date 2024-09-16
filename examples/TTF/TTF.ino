@@ -18,7 +18,7 @@
 #define WARMRESETBYTES "$PMTK102*31\r\n"
 #define HOTRESETBYTES  "$PMTK101*32\r\n"
 #define isValidDateTime(d, t) (d.Year() != 2080 || d.Month() != 1)
-#elif true // Quescan M10FD    
+#elif false // Quescan M10FD    
 #define GPSNAME "Quescan M10FD"
 #define RX D1
 #define TX D0
@@ -57,25 +57,14 @@ void setup()
   digitalWrite(D7, LOW); // GPS off for now
 
   Serial.begin(115200);
-//  delay(3000);
+  delay(2000);
 
 #if defined(LED_BUILTIN)
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 #endif
 
-  Serial1.setRxBufferSize(20000);
   Serial1.begin(GPSBAUD, SERIAL_8N1, RX, TX);
-
-#if false
-while (true)
-{
-    if (Serial1.available())
-        Serial.write(Serial1.read());
-    if (Serial.available())
-        Serial1.write(Serial.read());
-}
-#endif
 
 #if defined(INITIALSTART)
 {
@@ -84,72 +73,8 @@ while (true)
 }
 #endif
 
-#if false
-  for (unsigned long s = millis(); millis() - s < 10000;)
-  {
-    if (Serial1.available())
-        Serial.write(Serial1.read());
-  }
-#endif
     digitalWrite(D7, HIGH);
 
-    // For 5 seconds, wait for initial messages
-    TinyGPSAsync gps;
-    gps.begin(Serial1);
-
-    while (true)
-    {
-        if (gps.NewUnknownPacketAvailable())
-        {
-            auto &packet = gps.GetUnknownPacket();
-            Serial.printf("UNKNOWN %d - ", packet.size());
-            for (int i=0; i<(packet.size() < 20 ? packet.size() : 20); ++i)
-                Serial.printf("%02X(%c) ", packet[i], isprint(packet[i]) ? packet[i] : '.');
-            Serial.println();
-        }
-        if (gps.NewSentenceAvailable())
-        {
-            auto &sent = gps.GetSentences();
-            Serial.printf("    SENT: %s\n", sent.LastSentence.ToString().c_str());
-        }
-        if (gps.NewUbxPacketAvailable())
-        {
-            auto &ubx = gps.GetUbxPackets();
-            Serial.printf("        UBX: %d.%d %s\n", ubx.LastUbxPacket.Class(), ubx.LastUbxPacket.Id(), ubx.LastUbxPacket.ToString().c_str());
-        }
-    }
-#if false
-    std::map<string, int> mymap;
-    TinyGPSAsync gps;
-    gps.begin(Serial1);
-    unsigned long last = 0;
-    while (true)
-    {
-        static bool first = true;
-        if (gps.NewSentenceAvailable())
-        {
-            auto &sent = gps.GetSentences().LastSentence;
-            if (first)
-            {
-                Serial.printf("First: '%s'\n", sent.String().c_str());
-                first = false;
-            }
-
-            mymap[sent.SentenceId()]++;
-        }
-        unsigned long m = millis();
-        if (last / 10000 != m / 10000)
-        {
-            Serial.printf("%d: ", uint32_t(last / 10000));
-            for (auto kvp:mymap)
-                Serial.printf("%s: %d  ", kvp.first.c_str(), kvp.second);
-            auto &stats = gps.GetStatistics();
-            Serial.printf("Official RMC: %d  Official GGA: %d\n", stats.rmcCount, stats.ggaCount);
-            last = m;
-            mymap.clear();
-        }
-    }
-#endif
 }
 
 struct 
@@ -161,24 +86,6 @@ int loopcount = 0;
 void loop()
 {
     digitalWrite(D7, HIGH);
-
-    // For 5 seconds, wait for initial messages
-    TinyGPSAsync gps;
-    gps.begin(Serial1);
-    Serial.println();
-    Serial.printf("*** Startup %s ***                                                                                          \n", GPSNAME);
-#if false
-    for (unsigned long start = millis(); millis() - start < 5000;)
-    {
-        if (gps.NewSentenceAvailable())
-        {
-            auto &s = gps.GetSentences();
-            if (s.LastSentence.SentenceId() == "TXT")
-                Serial.printf("%03d: %s                                                                  \n", (millis() - start) / 1000, s.LastSentence.String().c_str());
-        }
-    }
-#endif
-    gps.end();
 
     // Cold reset
     Serial.println();
@@ -211,7 +118,7 @@ void loop()
 
 void Doit(int count, std::vector<byte> cmd)
 {
-    TinyGPSAsync gps;
+    static TinyGPSAsync gps;
     gps.begin(Serial1);
     for (byte c: cmd)
       Serial1.write(c);
@@ -232,7 +139,6 @@ void Doit(int count, std::vector<byte> cmd)
         }
     }
 
-
     int startsec = millis() / 1000;
     int seconds = -1;
     int max = count == 1 ? 3000 : 300;
@@ -250,6 +156,8 @@ void Doit(int count, std::vector<byte> cmd)
             auto s = ss.SatelliteCount;
             auto & f = ss.FixStatus;
             auto & stats = gps.GetStatistics();
+#if false
+
             char timestring[] = "  :  :  ";
             char datestring[] = "  -  -    ";
             char latstring[] = "[   lat   ]";
@@ -266,6 +174,11 @@ void Doit(int count, std::vector<byte> cmd)
             Serial.printf("%03d: %s %s %s %s Fix=%c Sats=%d GGA=%d RMC=%d UBX.Pvt=%d Diags=%s\r", seconds - startsec,
                 datestring, timestring, latstring, lngstring, f.Value(), s.Value(),
                 stats.ggaCount, stats.rmcCount, stats.ubxNavPvtCount, gps.DiagnosticString());
+#else
+            Serial.printf("%04d: %c%c%s%c%c%c Diags=%s\r", seconds - startsec, 
+                t.IsVoid() ? '.' : 'T', d.IsVoid() ? '.' : 'D', l.IsVoid() ? ".." : "LL", f.IsVoid() ? '.' : f.Value(),
+                s.Value() >= 3 ? '3' : '.', s.Value() >= 4 ? '4' : '.', gps.DiagnosticString());
+#endif            
             if (tt == max && !t.IsVoid() && isValidDateTime(d, t))
             {
                 Serial.printf("%03d: Got Time (%02d:%02d:%02d)                                                                                      \n", seconds - startsec, t.Hour(), t.Minute(), t.Second());

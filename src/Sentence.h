@@ -34,6 +34,7 @@ namespace TinyGPS
 
         static ParsedSentence FromString(const string &str);
         string ToString() const;
+        vector<uint8_t> ToBuffer() const;
     };
 
     struct Sentences

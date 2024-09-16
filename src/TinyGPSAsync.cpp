@@ -99,6 +99,12 @@ ParsedSentence ParsedSentence::FromString(const string &str)
     return s;
 }
 
+vector<uint8_t> ParsedSentence::ToBuffer() const
+{
+    std::string str = ToString();
+    return vector<uint8_t>(str.begin(), str.end());
+}
+
 string ParsedSentence::ToString() const
 {
     string str;
@@ -117,6 +123,22 @@ string ParsedUbxPacket::ToString() const
     sprintf(buf, "UBX: Class=%x Id=%x Len=%d Chksum=%x.%x (%s)", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
     return buf;
 }
+
+vector<uint8_t> ParsedUbxPacket::ToBuffer() const
+{
+    vector<uint8_t> ret;
+    ret.push_back(ubx.sync[0]);
+    ret.push_back(ubx.sync[1]);
+    ret.push_back(ubx.clss);
+    ret.push_back(ubx.id);
+    ret.push_back(ubx.payload.size() & 0xFF);
+    ret.push_back((ubx.payload.size() >> 8) & 0xFF);
+    ret.insert(ret.end(), ubx.payload.begin(), ubx.payload.end());
+    ret.push_back(ubx.chksum[0]);
+    ret.push_back(ubx.chksum[1]);
+    return ret;
+}
+
 
 ParsedUbxPacket ParsedUbxPacket::FromUbx(const Ubx &ubx)
 {
