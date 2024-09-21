@@ -12,12 +12,12 @@ namespace TinyGPS
         uint32_t ggaCount = 0;
         uint32_t rmcCount = 0;
         uint32_t ubxNavPvtCount = 0;
-        uint32_t ubx153Count = 0;
+        uint32_t ubxNavSatCount = 0;
 
         void clear()
         {
             encodedCharCount = validSentenceCount = invalidSentenceCount = failedChecksumCount =
-                passedChecksumCount = ggaCount = rmcCount = ubxNavPvtCount = ubx153Count = 0;
+                passedChecksumCount = ggaCount = rmcCount = ubxNavPvtCount = ubxNavSatCount = 0;
         }
     };
 }

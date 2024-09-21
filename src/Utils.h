@@ -1,4 +1,5 @@
 #include <chrono>
+#pragma once
 using namespace std::chrono;
 
 namespace TinyGPS

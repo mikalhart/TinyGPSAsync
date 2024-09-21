@@ -64,7 +64,7 @@ void loop()
   static set<string> talkers;
   if (gps.NewSentenceAvailable())
   {
-    auto & sentences = gps.GetSentences();
+    auto & sentences = gps.GetSentenceMap();
     Serial.print("Sentence IDs seen: ");
     for (auto s:sentences.AllSentences)
         Serial.printf("%s ", s.second.SentenceId().c_str());

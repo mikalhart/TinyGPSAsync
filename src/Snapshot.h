@@ -1,5 +1,5 @@
 #include "Satellites.h"
-#include "Sentence.h"
+#include "Packet.h"
 #include "Ubx.h"
 #include "Statistics.h"
 
@@ -120,6 +120,12 @@ namespace TinyGPS
                 isVoid = term.empty();
                 if (!isVoid)
                     v = (StatusEnum)term[0];
+            }
+            void set(StatusEnum fix, uint32_t timestamp)
+            {
+                stampIt(timestamp);
+                isVoid = false;
+                v = fix;
             }
         };
 

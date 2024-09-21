@@ -3,12 +3,14 @@
 
 void TaskSpecific::postNewUnknownPacket()
 {
+    UnknownPacket up = UnknownPacket::FromBuffer(buffer);
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
     {
         Counters.encodedCharCount += buffer.size();
-        hasNewCharacters = true;
+        hasNewPacket = true;
         hasNewUnknownPacket = true;
-        LastUnknownPacket = buffer;
+        LastUnknownPacket = up;
+        lastPacketType = UNKNOWN;
         buffer.clear();
 
         xSemaphoreGive(gpsMutex);
@@ -40,11 +42,11 @@ void TaskSpecific::handleUnknownBytes()
 
 void TaskSpecific::postNewUbxPacket(const Ubx &ubx)
 {
-    ParsedUbxPacket pu = ParsedUbxPacket::FromUbx(ubx);
+    UbxPacket pu = UbxPacket::FromUbx(ubx);
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
     {
         Counters.encodedCharCount += 8 + ubx.payload.size();
-        hasNewCharacters = true;
+        hasNewPacket = true;
         if (pu.IsValid())
         {
             ++Counters.validUbxCount;
@@ -53,6 +55,7 @@ void TaskSpecific::postNewUbxPacket(const Ubx &ubx)
                 ++Counters.passedChecksumCount;
                 string id = std::to_string(ubx.clss) + "." + std::to_string(ubx.id);
                 LastUbxPacket = NewUbxPackets[id] = pu;
+                lastPacketType = UBX;
                 hasNewUbxPackets = true;
                 if (id == "1.7")
                 {
@@ -62,7 +65,28 @@ void TaskSpecific::postNewUbxPacket(const Ubx &ubx)
                 }
                 else if (id == "1.53")
                 {
-                    ++Counters.ubx153Count;
+                    ++Counters.ubxNavSatCount;
+                    hasNewSatellites = true;
+                    uint8_t numSats = ubx.payload.size() > 5 ? ubx.payload[5] : 0;
+                    if (ubx.payload.size() >= 8 + 12 * numSats)
+                    {
+                        AllSatellites.clear();
+                        AllSatellites.reserve(numSats);
+                        for (byte i=0; i<numSats; ++i)
+                        {
+                            SatelliteInfo si;
+                            byte gnss = ubx.payload[8 + i * 12 + 0];
+                            si.talker_id = gnss == 0 ? "GP" : gnss == 1 ? "SN" : gnss == 2 ? "GA" : gnss == 3 ? "GB" : gnss == 5 ? "GQ" : gnss == 6 ? "GL" : gnss == 7 ? "GI" : "??";
+                            si.prn = ubx.payload[8 + i * 12 + 1];
+                            si.snr = ubx.payload[8 + i * 12 + 2];
+                            si.elevation = (int8_t)ubx.payload[8 + i * 12 + 3];
+                            si.azimuth = ubx.payload[8 + i * 12 + 4];
+                            byte flags = ubx.payload[8 + i * 12 + 8];
+                            si.used = (flags & (1 << 3)) ? true : false;
+                            AllSatellites.push_back(si);
+                        }
+                        hasNewSatellites = true;
+                    }
                 }
             }
             else
@@ -132,11 +156,12 @@ void TaskSpecific::handleUbxPacket()
 
 void TaskSpecific::postNewSentence(const string &s)
 {
-    ParsedSentence ps = ParsedSentence::FromString(s);
+    NmeaPacket ps = NmeaPacket::FromString(s);
+
     if (xSemaphoreTake(gpsMutex, portMAX_DELAY) == pdTRUE)
     {
         Counters.encodedCharCount += s.length();
-        hasNewCharacters = true;
+        hasNewPacket = true;
         if (ps.IsValid())
         {
             ++Counters.validSentenceCount;
@@ -147,6 +172,7 @@ void TaskSpecific::postNewSentence(const string &s)
                 if (id != "")
                 {
                     LastSentence = NewSentences[id] = ps;
+                    lastPacketType = NMEA;
                     hasNewSentences = true;
                 }
 
@@ -172,19 +198,21 @@ void TaskSpecific::postNewSentence(const string &s)
                     log_d("GSV: count: %d no: %d in view: %d", msgCount, msgNo, svsInView);
                     for (int i = 0; i < 4 && 4 * (msgNo - 1) + i < svsInView; ++i)
                     {
-                        SatInfo sat;
+                        SatelliteInfo sat;
                         sat.prn = (uint16_t)strtoul(ps[4 + 4 * i].c_str(), NULL, 10);
                         sat.elevation = (uint16_t)strtoul(ps[5 + 4 * i].c_str(), NULL, 10);
                         sat.azimuth = (uint16_t)strtoul(ps[6 + 4 * i].c_str(), NULL, 10);
                         sat.snr = (uint16_t)strtoul(ps[7 + 4 * i].c_str(), NULL, 10);
-                        SatelliteBuffer.push_back(sat);
+                        sat.talker_id = ps.TalkerId();
+                        sat.used = false;
+                        SatelliteStaging.push_back(sat);
                     }
                     
                     if (msgNo == msgCount)
                     {
-                        AllSatellites = SatelliteBuffer;
+                        // AllSatellites = SatelliteStaging; XXX fix this up
                         SatelliteTalkerId = ps.TalkerId();
-                        SatelliteBuffer.clear();
+                        SatelliteStaging.clear();
                         hasNewSatellites = true;
                     }
                 }
@@ -256,8 +284,6 @@ void TaskSpecific::mainLoop(void *pvParameters)
                 pThis->handleUbxPacket();
             else
                 pThis->handleUnknownBytes();
-if (!pThis->buffer.empty())
-Serial.printf("OOPS\n");
         }
 
         vTaskDelay(1);

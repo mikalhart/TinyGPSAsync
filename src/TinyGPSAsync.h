@@ -23,38 +23,39 @@ namespace TinyGPS
         Status DiagnosticCode();
         const char *DiagnosticString();
 
-        const Snapshot &GetSnapshot()     { syncSnapshot(); return snapshot; }
-        const Satellites &GetSatellites() { syncSatellites(); return satellites;}
-        const Sentences &GetSentences()   { syncSentences(); return sentences; }
-        const UbxPackets &GetUbxPackets() { syncUbxPackets(); return ubxPackets; }
-        const Statistics &GetStatistics() { syncStatistics(); return statistics; }
-        const vector<uint8_t> &GetUnknownPacket() { syncUnknownPackets(); return lastUnknownPacket; }
-        bool NewSnapshotAvailable()       { return task.hasNewSnapshot; }
-        bool NewSatellitesAvailable()     { return task.hasNewSatellites; }
-        bool NewSentenceAvailable()       { return task.hasNewSentences; }
-        bool NewUbxPacketAvailable()      { return task.hasNewUbxPackets; }
-        bool NewCharactersAvailable()     { return task.hasNewCharacters; }
-        bool NewUnknownPacketAvailable()  { return task.hasNewUnknownPacket; }
+        const Snapshot &GetSnapshot()                { syncSnapshot(); task.hasNewSnapshot = false; return snapshot; }
+        const vector<SatelliteInfo> &GetSatellites() { syncSatellites(); task.hasNewSatellites = false; return satellites;}
+        const Packet &GetLatestPacket()              { syncPackets(); task.hasNewPacket = false; return *latest; }
+        const SentenceMap &GetSentenceMap()          { syncPackets(); task.hasNewSentences = false; return sentenceMap; }
+        const UbxPacketMap &GetUbxPacketMap()        { syncPackets(); task.hasNewUbxPackets = false; return ubxPacketMap; }
+        const Statistics &GetStatistics()            { syncStatistics(); return statistics; }
+        bool NewSnapshotAvailable()                  { return task.hasNewSnapshot; }
+        bool NewSatellitesAvailable()                { return task.hasNewSatellites; }
+        bool NewSentenceAvailable()                  { return task.hasNewSentences; }
+        bool NewUbxPacketAvailable()                 { return task.hasNewUbxPackets; }
+        bool NewUnknownPacketAvailable()             { return task.hasNewUnknownPacket; }
+        bool NewPacketAvailable()                    { return task.hasNewPacket; }
 
     private:
         uint32_t startTime;
         TaskSpecific task;
         Snapshot snapshot;
-        Satellites satellites;
-        Sentences sentences;
-        UbxPackets ubxPackets;
+        vector<SatelliteInfo> satellites;
+        SentenceMap sentenceMap;
+        UbxPacketMap ubxPacketMap;
         Statistics statistics;
-        vector<uint8_t> lastUnknownPacket;
+        NmeaPacket latestNmea;
+        UbxPacket latestUbx;
+        UnknownPacket latestUnknown;
+        Packet *latest = &UnknownPacket::Empty;
 
         void syncStatistics();
         void syncSatellites();
-        void syncSentences();
-        void syncUbxPackets();
+        void syncPackets();
         void syncSnapshot();
-        void syncUnknownPackets();
-        void processGGA(const ParsedSentence &sentence);
-        void processRMC(const ParsedSentence &sentence);
-        void processUbxNavPvt(const ParsedUbxPacket &pu);
+        void processGGA(const NmeaPacket &sentence);
+        void processRMC(const NmeaPacket &sentence);
+        void processUbxNavPvt(const UbxPacket &pu);
         uint16_t makeU16(uint8_t lo, uint8_t hi) { return lo + (hi << 8); }
         int32_t makeI32(uint8_t lo0, uint8_t lo1, uint8_t lo2, uint8_t hi) { return lo0 + (lo1 << 8) + (lo2 << 16) + (hi << 24); }
 

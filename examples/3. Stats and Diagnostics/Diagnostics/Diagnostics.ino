@@ -1,18 +1,12 @@
-#include <Arduino.h>
 #include <TinyGPSAsync.h>
+#if __has_include("../examples/Device.h")
+    #include "../examples/Device.h"
+#endif
 
 TinyGPSAsync gps;
 
-/* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN D0
-#define GPS_TX_PIN D1
-#define GPS_BAUD 9600
-#define GPSSerial Serial1
-
 void setup()
 {
-pinMode(D6, OUTPUT);
-digitalWrite(D6, HIGH);
   Serial.begin(115200);
 
   GPSSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
@@ -30,7 +24,7 @@ void loop()
 {
   int status = gps.DiagnosticCode();
   string statusString = gps.DiagnosticString();
-  if (gps.NewCharactersAvailable())
+  if (gps.NewPacketAvailable())
   {
     auto &counters = gps.GetStatistics();
     auto &ss = gps.GetSnapshot();

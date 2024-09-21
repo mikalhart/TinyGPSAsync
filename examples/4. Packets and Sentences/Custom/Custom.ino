@@ -1,13 +1,9 @@
-#include <Arduino.h>
 #include <TinyGPSAsync.h>
+#if __has_include("../examples/Device.h")
+    #include "../examples/Device.h"
+#endif
 
 TinyGPSAsync gps;
-
-/* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN 2
-#define GPS_TX_PIN 3
-#define GPS_BAUD 9600
-#define GPSSerial Serial1
 
 void setup()
 {
@@ -27,7 +23,7 @@ void setup()
 // the commonly used GSA sentence
 void loop()
 {
-  auto s = gps.GetSentences();
+  auto s = gps.GetSentenceMap();
   auto &gsa = s["GSA"];
   static string oldvdop;
   static int oldstatus = -1;
@@ -56,6 +52,6 @@ void loop()
   if (changed)
   {
     Serial.printf("VDOP: %s Status: %s\n", 
-      oldvdop.empty() ? "Unknown" : oldvdop.c_str(), gps.DiagnosticString().c_str());
+      oldvdop.empty() ? "Unknown" : oldvdop.c_str(), gps.DiagnosticString());
   }
 }

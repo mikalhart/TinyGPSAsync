@@ -1,19 +1,16 @@
 #include <vector>
+#include <map>
 using namespace std;
 
 namespace TinyGPS
 {
-    struct SatInfo
+    struct SatelliteInfo
     {
+        string talker_id;
+        bool used;
         uint16_t prn;
-        uint8_t elevation;
+        int8_t elevation;
         uint16_t azimuth;
         uint8_t snr;
-    };
-
-    struct Satellites
-    {
-        vector<SatInfo> Sats;
-        string Talker;
     };
 };

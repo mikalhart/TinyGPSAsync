@@ -10,34 +10,36 @@ namespace TinyGPS
     {
     public:
         /* For signaling to main thread */
-        std::atomic<bool> hasNewCharacters;
         std::atomic<bool> hasNewSatellites;
-        std::atomic<bool> hasNewSentences;
-        std::atomic<bool> hasNewUbxPackets;
-        std::atomic<bool> hasNewUnknownPacket;
+        std::atomic<bool> hasNewPacket;
+            std::atomic<bool> hasNewUbxPackets;
+            std::atomic<bool> hasNewUnknownPacket;
+            std::atomic<bool> hasNewSentences;
         std::atomic<bool> hasNewSnapshot;
         std::atomic<bool> taskActive;
 
         /* Items guarded by mutex */
-        ParsedSentence LastSentence;
-        std::map<string, ParsedSentence> NewSentences;
-        std::map<string, ParsedSentence> SnapshotSentences;
+        NmeaPacket LastSentence;
+        std::map<string, NmeaPacket> NewSentences;
+        std::map<string, NmeaPacket> SnapshotSentences;
 
-        ParsedUbxPacket LastUbxPacket;
-        std::map<string, ParsedUbxPacket> NewUbxPackets;
-        std::map<string, ParsedUbxPacket> SnapshotUbxPackets;
+        UbxPacket LastUbxPacket;
+        std::map<string, UbxPacket> NewUbxPackets;
+        std::map<string, UbxPacket> SnapshotUbxPackets;
 
-        std::vector<uint8_t> LastUnknownPacket;
+        UnknownPacket LastUnknownPacket;
+
+        enum {UNKNOWN, NMEA, UBX} lastPacketType = UNKNOWN;
 
         Statistics Counters;
-        vector<SatInfo> AllSatellites;
+        vector<SatelliteInfo> AllSatellites;
         string SatelliteTalkerId;
 
     private:
         vector<uint8_t> buffer;
 
         /* Internal items (not guarded) */
-        vector<SatInfo> SatelliteBuffer;
+        vector<SatelliteInfo> SatelliteStaging;
         Stream *stream = nullptr;
         void clear()
         {
@@ -45,7 +47,7 @@ namespace TinyGPS
             NewSentences.clear();
             AllSatellites.clear();
             SatelliteTalkerId = "";
-            hasNewCharacters = hasNewSatellites = hasNewSentences = hasNewSnapshot = false;
+            hasNewPacket = hasNewSatellites = hasNewSentences = hasNewSnapshot = false;
         }
         void postNewSentence(const string &s);
         void postNewUbxPacket(const Ubx &ubx);

@@ -1,13 +1,9 @@
-#include <Arduino.h>
 #include <TinyGPSAsync.h>
+#if __has_include("../examples/Device.h")
+    #include "../examples/Device.h"
+#endif
 
 TinyGPSAsync gps;
-
-/* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN D1
-#define GPS_TX_PIN D0
-#define GPS_BAUD 115200
-#define GPSSerial Serial1
 
 void setup()
 {

@@ -47,127 +47,7 @@ void Snapshot::DecimalItem::parse(const string &term, uint32_t timestamp)
     }
 }
 
-/* static */
-ParsedSentence ParsedSentence::FromString(const string &str)
-{
-    ParsedSentence s;
-    s.lastUpdateTime = Utils::msticks();
-    s.isNew = true;
-    s.charCount = str.length();
-    size_t start = 0;
-    size_t delimiterPos = str.find_first_of(",*");
-    unsigned long calculatedChksum = 0;
-    log_d("Parsing sentence %s", str.c_str());
-    while (true)
-    {
-        string token = delimiterPos != string::npos ? str.substr(start, delimiterPos - start) : str.substr(start);
-        s.fields.push_back(token);
-        for (auto c : token.substr(s.fields.size() == 1 && s.fields[0].substr(0, 1) == "$" ? 1 : 0))
-            calculatedChksum ^= c;
-
-        if (delimiterPos == string::npos)
-        {
-            s.hasChecksum = s.checksumValid = false;
-            log_d("Doesn't have any * checksum");
-            break;
-        }
-
-        if (str[delimiterPos] == '*')
-        {
-            token = str.substr(delimiterPos + 1);
-            s.fields.push_back(token);
-            if (token.find_first_not_of("0123456789ABCDEFabcdef") != string::npos)
-            {
-                s.hasChecksum = s.checksumValid = false;
-                log_e("Bad format checksum: '%s'", token.c_str());
-                log_e("Sentence was '%s'", str.c_str());
-            }
-            else
-            {
-                unsigned long suppliedChecksum = strtoul(token.c_str(), NULL, 16);
-                s.hasChecksum = true;
-                s.checksumValid = suppliedChecksum == calculatedChksum;
-            }
-            break;
-        }
-
-        calculatedChksum ^= ',';
-        start = delimiterPos + 1;
-        delimiterPos = str.find_first_of(",*", start);
-    }
-
-    return s;
-}
-
-vector<uint8_t> ParsedSentence::ToBuffer() const
-{
-    std::string str = ToString();
-    return vector<uint8_t>(str.begin(), str.end());
-}
-
-string ParsedSentence::ToString() const
-{
-    string str;
-    for (int i = 0; i < fields.size(); ++i)
-    {
-        str += fields[i];
-        if (i != fields.size() - 1)
-            str += i == fields.size() - 2 ? '*' : ',';
-    }
-    return str;
-}
-
-string ParsedUbxPacket::ToString() const
-{
-    char buf[100];
-    sprintf(buf, "UBX: Class=%x Id=%x Len=%d Chksum=%x.%x (%s)", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
-    return buf;
-}
-
-vector<uint8_t> ParsedUbxPacket::ToBuffer() const
-{
-    vector<uint8_t> ret;
-    ret.push_back(ubx.sync[0]);
-    ret.push_back(ubx.sync[1]);
-    ret.push_back(ubx.clss);
-    ret.push_back(ubx.id);
-    ret.push_back(ubx.payload.size() & 0xFF);
-    ret.push_back((ubx.payload.size() >> 8) & 0xFF);
-    ret.insert(ret.end(), ubx.payload.begin(), ubx.payload.end());
-    ret.push_back(ubx.chksum[0]);
-    ret.push_back(ubx.chksum[1]);
-    return ret;
-}
-
-
-ParsedUbxPacket ParsedUbxPacket::FromUbx(const Ubx &ubx)
-{
-    ParsedUbxPacket u;
-    uint16_t len = ubx.payload.size();
-    u.lastUpdateTime = Utils::msticks();
-    u.isNew = true;
-    u.charCount = 8 + len;
-    unsigned long calculatedChksum = 0;
-    log_d("Parsing Ubx %d.%d", ubx.clss, ubx.id);
-    u.valid = ubx.sync[0] == 0xB5 && ubx.sync[1] == 0x62;
-    byte ck_A = 0, ck_B = 0;
-    updateChecksum(ck_A, ck_B, ubx.clss);
-    updateChecksum(ck_A, ck_B, ubx.id);
-    updateChecksum(ck_A, ck_B, (byte)(len & 0xFF));
-    updateChecksum(ck_A, ck_B, (byte)((len >> 8) & 0xFF));
-    for (int i=0; i<len; ++i)
-        updateChecksum(ck_A, ck_B, ubx.payload[i]);
-    u.checksumValid = ck_A == ubx.chksum[0] && ck_B == ubx.chksum[1];
-if (!u.checksumValid)
-{
-    Serial.printf("\n\n%s\n", u.ToString().c_str());
-    Serial.printf("Expected %02X:%02X got %02X:%02X\n\n", ubx.chksum[0], ubx.chksum[1], ck_A, ck_B);
-}
-    u.ubx = ubx;
-    return u;
-}
-
-void TinyGPSAsync::processGGA(const ParsedSentence &sentence)
+void TinyGPSAsync::processGGA(const NmeaPacket &sentence)
 {
     auto timestamp = sentence.Timestamp();
     snapshot.Time.parse(sentence[1].c_str(), timestamp);
@@ -178,7 +58,7 @@ void TinyGPSAsync::processGGA(const ParsedSentence &sentence)
     snapshot.Altitude.parse(sentence[9].c_str(), timestamp);
 }
 
-void TinyGPSAsync::processRMC(const ParsedSentence &sentence)
+void TinyGPSAsync::processRMC(const NmeaPacket &sentence)
 {
     auto timestamp = sentence.Timestamp();
     snapshot.Time.parse(sentence[1].c_str(), timestamp);
@@ -189,7 +69,7 @@ void TinyGPSAsync::processRMC(const ParsedSentence &sentence)
     snapshot.Date.parse(sentence[9], timestamp);
 }
 
-void TinyGPSAsync::processUbxNavPvt(const ParsedUbxPacket &pu)
+void TinyGPSAsync::processUbxNavPvt(const UbxPacket &pu)
 {
     auto & payload = pu.Packet().payload;
     auto timestamp = pu.Timestamp();
@@ -227,17 +107,18 @@ void TinyGPSAsync::processUbxNavPvt(const ParsedUbxPacket &pu)
             int32_t lat = makeI32(payload[28], payload[29], payload[30], payload[31]);
             int32_t lng = makeI32(payload[24], payload[25], payload[26], payload[27]);
             snapshot.Location.set(lat, lng, timestamp);
+            snapshot.FixStatus.set(Snapshot::FixStatusItem::A, timestamp);
         }
         else
         {
             snapshot.Location.clear(timestamp);
+            snapshot.FixStatus.set(Snapshot::FixStatusItem::V, timestamp);
         }
 
         // Quality
         // Sat count
         // HDOP
         // Altitude
-        // Fix status
         // Speed
         // Course
     }
@@ -246,7 +127,7 @@ void TinyGPSAsync::processUbxNavPvt(const ParsedUbxPacket &pu)
 
 void TinyGPSAsync::syncStatistics()
 {
-    if (task.hasNewCharacters)
+    if (task.hasNewPacket)
     {
         log_d("Taking semaphore");
         if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
@@ -259,12 +140,11 @@ void TinyGPSAsync::syncStatistics()
             statistics.invalidSentenceCount += task.Counters.invalidSentenceCount;
             statistics.ggaCount += task.Counters.ggaCount;
             statistics.rmcCount += task.Counters.rmcCount;
-            statistics.ubx153Count += task.Counters.ubx153Count;
+            statistics.ubxNavSatCount += task.Counters.ubxNavSatCount;
             statistics.ubxNavPvtCount += task.Counters.ubxNavPvtCount;
             task.Counters.clear();
             xSemaphoreGive(task.gpsMutex);
         }
-        task.hasNewCharacters = false;
     }
 }
 
@@ -278,71 +158,61 @@ void TinyGPSAsync::syncSatellites()
             // Copy over any new satellite info from GSV
             if (!task.AllSatellites.empty())
             {
-                satellites.Sats = task.AllSatellites;
-                satellites.Talker = task.SatelliteTalkerId;
+                satellites = task.AllSatellites;
             }
 
             task.AllSatellites.clear();
             xSemaphoreGive(task.gpsMutex);
         }
-        task.hasNewSatellites = false;
     }
 }
 
-void TinyGPSAsync::syncSentences()
+void TinyGPSAsync::syncPackets()
 {
-    if (task.hasNewSentences)
+    if (task.hasNewPacket)
     {
-        std::map<string, ParsedSentence> newSentences;
+        std::map<string, NmeaPacket> newSentences;
+        std::map<string, UbxPacket> newUbxPackets;
         log_d("Taking semaphore");
         if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
         {
-            // Copy over all new sentences
-            sentences.LastSentence = task.LastSentence;
-            newSentences = task.NewSentences;
+            if (task.hasNewSentences)
+            {
+                // Copy over all new sentences
+                latestNmea = task.LastSentence;
+                newSentences = task.NewSentences;
+                task.hasNewSentences = false;
+                task.NewSentences.clear();
+            }
 
-            task.NewSentences.clear();
+            if (task.hasNewUbxPackets)
+            {
+                latestUbx = task.LastUbxPacket;
+                newUbxPackets = task.NewUbxPackets;
+                task.hasNewUbxPackets = false;
+                task.NewUbxPackets.clear();
+            }
+
+            if (task.hasNewUnknownPacket)
+            {
+                latestUnknown = task.LastUnknownPacket;
+                task.hasNewUnknownPacket = false;
+                xSemaphoreGive(task.gpsMutex);
+            }
+            if (task.lastPacketType == TaskSpecific::NMEA)
+                latest = &latestNmea;
+            else if (task.lastPacketType == TaskSpecific::UBX)
+                latest = &latestUbx;
+            else
+                latest = &latestUnknown;
             xSemaphoreGive(task.gpsMutex);
         }
 
         // After the semaphore has been released, process all new sentences
         for (auto kvp : newSentences)
-            sentences.AllSentences[kvp.first] = kvp.second;
-        task.hasNewSentences = false;
-    }
-}
-
-void TinyGPSAsync::syncUbxPackets()
-{
-    std::map<string, ParsedUbxPacket> newUbxPackets;
-    if (task.hasNewUbxPackets)
-    {
-        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
-        {
-            ubxPackets.LastUbxPacket = task.LastUbxPacket;
-            newUbxPackets = task.NewUbxPackets;
-            task.NewUbxPackets.clear();
-            xSemaphoreGive(task.gpsMutex);
-        }
-
-        // After the semaphore has been released, process all new ubx packets
+            sentenceMap.AllSentences[kvp.first] = kvp.second;
         for (auto kvp : newUbxPackets)
-            ubxPackets.AllUbxPackets[kvp.first] = kvp.second;
-        task.hasNewUbxPackets = false;
-    }
-}
-
-void TinyGPSAsync::syncUnknownPackets()
-{
-    if (task.hasNewUnknownPacket)
-    {
-        if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
-        {
-            lastUnknownPacket = task.LastUnknownPacket;
-            xSemaphoreGive(task.gpsMutex);
-        }
-
-        task.hasNewUnknownPacket = false;
+            ubxPacketMap.AllUbxPackets[kvp.first] = kvp.second;
     }
 }
 
@@ -350,8 +220,8 @@ void TinyGPSAsync::syncSnapshot()
 {
     if (task.hasNewSnapshot)
     {
-        std::map<string, ParsedSentence> newSentences;
-        std::map<string, ParsedUbxPacket> newUbxPackets;
+        std::map<string, NmeaPacket> newSentences;
+        std::map<string, UbxPacket> newUbxPackets;
         log_d("Taking semaphore");
         if (xSemaphoreTake(task.gpsMutex, portMAX_DELAY) == pdTRUE)
         {
@@ -382,7 +252,6 @@ void TinyGPSAsync::syncSnapshot()
                 processUbxNavPvt(kvp.second);
             }
         }
-        task.hasNewSnapshot = false;
     }
 }
 
@@ -452,7 +321,7 @@ TinyGPSAsync::Status TinyGPSAsync::DiagnosticCode()
             return WIRING;
         if (stats.invalidSentenceCount > 3 || stats.validSentenceCount == 0)
             return BAUD;
-        if (stats.ggaCount < 5 && stats.rmcCount < 5)
+        if (stats.ggaCount < 5 && stats.rmcCount < 5 && stats.ubxNavPvtCount < 5)
             return MISSING;
     }
     if (stats.failedChecksumCount > 3)
@@ -468,7 +337,7 @@ const char *TinyGPSAsync::DiagnosticString()
         { WIRING, "Possible wiring issue" },
         { BAUD, "Possible baud rate mismatch" },
         { OVERFLOW, "Characters dropping" },
-        { MISSING, "GGA or RMC not available" },
+        { MISSING, "Snapshot UBX/NMEA not available" },
         { OK, "Ok" }
     };
     Status status = DiagnosticCode();
