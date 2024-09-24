@@ -7,12 +7,6 @@
 
 TinyGPSAsync gps;
 
-/* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN D1
-#define GPS_TX_PIN D0
-#define GPS_BAUD 9600
-#define GPSSerial Serial1
-
 static const int MAX_SATELLITES = 60;
 struct satelevinfo
 {

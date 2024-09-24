@@ -1,11 +1,11 @@
 #include <map>
-using namespace std;
+// using namespace std;
 
 namespace TinyGPS
 {
     struct UbxPacketMap
     {
-        std::map<string, UbxPacket> AllUbxPackets;
+        std::map<std::string, UbxPacket> AllUbxPackets;
         const UbxPacket &operator[] (const char *id) const 
         { 
             auto ret = AllUbxPackets.find(id);
@@ -39,7 +39,7 @@ namespace TinyGPS
         static constexpr uint16_t RESET_WARM = 0x0001;
         static constexpr uint16_t RESET_COLD = 0xFFFF;
 
-        void sendpacket(uint8_t clss, uint8_t id, vector<uint8_t> &payload)
+        void sendpacket(uint8_t clss, uint8_t id, std::vector<uint8_t> &payload)
         {
             byte ck_A = 0, ck_B = 0;
 
@@ -65,7 +65,7 @@ namespace TinyGPS
 
         void setpacketrate(uint32_t packet_type, uint8_t rate)
         {
-            vector<uint8_t> payload = {0x01, 0x01, 0x00, 0x00};
+            std::vector<uint8_t> payload = {0x01, 0x01, 0x00, 0x00};
             payload.reserve(9);
             payload.push_back((uint8_t)((packet_type >> 0) & 0xFF));
             payload.push_back((uint8_t)((packet_type >> 8) & 0xFF));
@@ -80,7 +80,7 @@ namespace TinyGPS
         {
             uint32_t cfg_rate_meas = 0x30210001;
             uint32_t cfg_rate_nav  = 0x30210002;
-            vector<uint8_t> payload = {0x01, 0x01, 0x00, 0x00};
+            std::vector<uint8_t> payload = {0x01, 0x01, 0x00, 0x00};
             payload.reserve(10);
             payload.push_back((uint8_t)((cfg_rate_meas >> 0) & 0xFF));
             payload.push_back((uint8_t)((cfg_rate_meas >> 8) & 0xFF));
@@ -102,7 +102,7 @@ namespace TinyGPS
 
         void reset(uint16_t type)
         {
-            vector<uint8_t> payload;
+            std::vector<uint8_t> payload;
             payload.reserve(4);
             payload.push_back((uint8_t)((type >> 0) & 0xFF));
             payload.push_back((uint8_t)((type >> 8) & 0xFF));

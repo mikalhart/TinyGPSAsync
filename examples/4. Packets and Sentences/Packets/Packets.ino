@@ -16,27 +16,29 @@ void setup()
   delay(3000);
 
   // Serial1.setRxBufferSize(2048);
-  Serial1.begin(GPS_BAUD, SERIAL_8N1, RX, TX);
+  Serial1.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
 
+#if 0
 #define FACTORYRESETBYTES { 0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x02, 0x1A, 0x0A }
 
   for (auto ch: FACTORYRESETBYTES)
     Serial1.write(ch);
   delay(500);
+#endif
+
+  gps.begin(Serial1);
 
   UBXProtocol ubx(Serial1);
   ubx.setpacketrate(UBXProtocol::PACKET_NMEA_GGA, 0);
   ubx.setpacketrate(UBXProtocol::PACKET_NMEA_GSV, 0);
   ubx.setpacketrate(UBXProtocol::PACKET_NMEA_GSA, 0);
   ubx.setpacketrate(UBXProtocol::PACKET_NMEA_VTG, 0);
-  ubx.setpacketrate(UBXProtocol::PACKET_NMEA_RMC, 0);
+  ubx.setpacketrate(UBXProtocol::PACKET_NMEA_RMC, 1);
   ubx.setpacketrate(UBXProtocol::PACKET_NMEA_GLL, 0);
-  ubx.setpacketrate(UBXProtocol::PACKET_UBX_PVT, 0);
+  ubx.setpacketrate(UBXProtocol::PACKET_UBX_PVT, 1);
   ubx.setpacketrate(UBXProtocol::PACKET_UBX_SAT, 1);
   
   ubx.setHZ(1000);
-
-  gps.begin(Serial1);
 }
 
 const int ITEMSPERROW = 16;

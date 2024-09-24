@@ -18,6 +18,7 @@ void setup()
     Serial1.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
     Serial.printf("Testing to see the average speed to get time and date\r\n");
     Serial.printf("Fail if it takes more than %d minutes from cold start\r\n\r\n", Fail / 60);
+
     Serial.printf("%-3s  %-5s %-5s\r\n", "Tst", "Time", "Avg");
     Serial.printf("---------------\r\n");
     gps.begin(Serial1);
@@ -79,9 +80,9 @@ void loop()
                 if (td != Fail && i < td && i + TickSize >= td)
                     Serial.printf("D");
                 Serial.printf(i + TickSize > elapsed_secs ? "*" : " ");
+            }
                 if (gps.DiagnosticCode() != 0)
                     Serial.printf(" %s", gps.DiagnosticString());
-            }
             if (elapsed_secs + 1 == Fail)
                 Serial.printf("\033[31m FAIL\033[0m");
             Serial.printf("\r");

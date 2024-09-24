@@ -1,15 +1,23 @@
 /* Here's where you customize for your personal ESP32 setup */
-#define GPS_RX_PIN D1
-#define GPS_TX_PIN D0
 
 #if false // Quescan
+#define GPS_RX_PIN D1
+#define GPS_TX_PIN D0
 #define GPS_BAUD 38400
 #define GPSSerial Serial1
 #define DEVNAME "QUESC"
-#else
+#elif true // Sparkfun
+#define GPS_RX_PIN D1
+#define GPS_TX_PIN D0
 #define GPS_BAUD 9600
 #define GPSSerial Serial1
 #define DEVNAME "SAM10"
+#else // Andrew
+#define GPS_RX_PIN D0
+#define GPS_TX_PIN D1
+#define GPS_BAUD 38400
+#define GPSSerial Serial1
+#define DEVNAME "Andrew"
 #endif
 
 

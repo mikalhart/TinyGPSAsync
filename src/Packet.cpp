@@ -2,9 +2,9 @@
 #include "Packet.h"
 namespace TinyGPS
 {
-    string NmeaPacket::ToString() const
+    std::string NmeaPacket::ToString() const
     {
-        string str;
+        std::string str;
         for (int i = 0; i < fields.size(); ++i)
         {
             str += fields[i];
@@ -15,7 +15,7 @@ namespace TinyGPS
     }
 
     /* static */
-    NmeaPacket NmeaPacket::FromString(const string &str)
+    NmeaPacket NmeaPacket::FromString(const std::string &str)
     {
         NmeaPacket s;
         s.lastUpdateTime = Utils::msticks();
@@ -28,12 +28,12 @@ namespace TinyGPS
         log_d("Parsing sentence %s", str.c_str());
         while (true)
         {
-            string token = delimiterPos != string::npos ? str.substr(start, delimiterPos - start) : str.substr(start);
+            std::string token = delimiterPos != std::string::npos ? str.substr(start, delimiterPos - start) : str.substr(start);
             s.fields.push_back(token);
             for (auto c : token.substr(s.fields.size() == 1 && s.fields[0].substr(0, 1) == "$" ? 1 : 0))
                 calculatedChksum ^= c;
 
-            if (delimiterPos == string::npos)
+            if (delimiterPos == std::string::npos)
             {
                 s.hasChecksum = s.checksumValid = false;
                 log_d("Doesn't have any * checksum");
@@ -44,7 +44,7 @@ namespace TinyGPS
             {
                 token = str.substr(delimiterPos + 1);
                 s.fields.push_back(token);
-                if (token.find_first_not_of("0123456789ABCDEFabcdef") != string::npos)
+                if (token.find_first_not_of("0123456789ABCDEFabcdef") != std::string::npos)
                 {
                     s.hasChecksum = s.checksumValid = false;
                     log_e("Bad format checksum: '%s'", token.c_str());
@@ -67,13 +67,13 @@ namespace TinyGPS
         return s;
     }
 
-    vector<uint8_t> NmeaPacket::ToBuffer() const
+    std::vector<uint8_t> NmeaPacket::ToBuffer() const
     {
         std::string str = ToString();
-        return vector<uint8_t>(str.begin(), str.end());
+        return std::vector<uint8_t>(str.begin(), str.end());
     }
 
-    string UbxPacket::ToString() const
+    std::string UbxPacket::ToString() const
     {
         char buf[100];
         sprintf(buf, "UBX: Class=%x Id=%x Len=%d Chksum=%x.%x (%s)", ubx.clss, ubx.id, ubx.payload.size(), ubx.chksum[0], ubx.chksum[1], checksumValid ? "valid" : "invalid");
@@ -103,9 +103,9 @@ namespace TinyGPS
         return u;
     }
 
-    vector<uint8_t> UbxPacket::ToBuffer() const
+    std::vector<uint8_t> UbxPacket::ToBuffer() const
     {
-        vector<uint8_t> ret;
+        std::vector<uint8_t> ret;
         ret.push_back(ubx.sync[0]);
         ret.push_back(ubx.sync[1]);
         ret.push_back(ubx.clss);

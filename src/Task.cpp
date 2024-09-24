@@ -24,7 +24,7 @@ void TaskSpecific::handleUnknownBytes()
     {
         if (stream->available())
         {
-            byte c = stream->peek();
+            uint8_t c = stream->peek();
             if (c == '$' || c == 0xB5)
                 break;
             buffer.push_back(stream->read());
@@ -72,16 +72,16 @@ void TaskSpecific::postNewUbxPacket(const Ubx &ubx)
                     {
                         AllSatellites.clear();
                         AllSatellites.reserve(numSats);
-                        for (byte i=0; i<numSats; ++i)
+                        for (uint8_t i=0; i<numSats; ++i)
                         {
                             SatelliteInfo si;
-                            byte gnss = ubx.payload[8 + i * 12 + 0];
+                            uint8_t gnss = ubx.payload[8 + i * 12 + 0];
                             si.talker_id = gnss == 0 ? "GP" : gnss == 1 ? "SN" : gnss == 2 ? "GA" : gnss == 3 ? "GB" : gnss == 5 ? "GQ" : gnss == 6 ? "GL" : gnss == 7 ? "GI" : "??";
                             si.prn = ubx.payload[8 + i * 12 + 1];
                             si.snr = ubx.payload[8 + i * 12 + 2];
                             si.elevation = (int8_t)ubx.payload[8 + i * 12 + 3];
                             si.azimuth = ubx.payload[8 + i * 12 + 4];
-                            byte flags = ubx.payload[8 + i * 12 + 8];
+                            uint8_t flags = ubx.payload[8 + i * 12 + 8];
                             si.used = (flags & (1 << 3)) ? true : false;
                             AllSatellites.push_back(si);
                         }
@@ -110,7 +110,7 @@ void TaskSpecific::handleUbxPacket()
     {
         if (stream->available())
         {
-            byte b = stream->read();
+            uint8_t b = stream->read();
             buffer.push_back(b);
             if (buffer.size() == buffer.capacity())
             {
@@ -123,7 +123,7 @@ void TaskSpecific::handleUbxPacket()
 
             if (buffer.size() == 6)
             {
-                payloadLen = 0x100 * (byte)buffer[5] + (byte)buffer[4];
+                payloadLen = 0x100 * (uint8_t)buffer[5] + (uint8_t)buffer[4];
                 if (payloadLen >= buffer.capacity() - 8)
                 {
                     postNewUnknownPacket();
@@ -277,7 +277,7 @@ void TaskSpecific::mainLoop(void *pvParameters)
     {
         if (pThis->stream->available())
         {
-            byte c = pThis->stream->peek();
+            uint8_t c = pThis->stream->peek();
             if (c == '$')
                 pThis->handleNMEASentence();
             else if (c == 0xB5)

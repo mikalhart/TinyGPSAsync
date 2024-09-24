@@ -47,7 +47,8 @@ namespace TinyGPS
                 bool negative = false;
                 void parseDegrees(const char *degTerm, const char *nsewTerm);
             } RawLat, RawLng;
-            void parse(const string &termLat, const string &NS, const string &termLng, const string &EW, uint32_t timestamp)
+
+            void parse(const std::string &termLat, const std::string &NS, const std::string &termLng, const std::string &EW, uint32_t timestamp)
             {
                 stampIt(timestamp);
                 isVoid = termLat.empty() || termLng.empty();
@@ -96,7 +97,7 @@ namespace TinyGPS
             QualityEnum Value() const { isNew = false; return v; }
         private:
             QualityEnum v = Invalid;
-            void parse(const string &term, uint32_t timestamp) 
+            void parse(const std::string &term, uint32_t timestamp) 
             { 
                 stampIt(timestamp);
                 isVoid = term.empty();
@@ -114,7 +115,7 @@ namespace TinyGPS
             bool IsPositionValid() const { isNew = false; return v == A; }
         private:
             StatusEnum v = N;
-            void parse(const string &term, uint32_t timestamp)
+            void parse(const std::string &term, uint32_t timestamp)
             {
                 stampIt(timestamp);
                 isVoid = term.empty();
@@ -134,7 +135,7 @@ namespace TinyGPS
             friend class TinyGPSAsync;
         protected:
             uint32_t v = 0;
-            void parse(const string &term, uint32_t timestamp) 
+            void parse(const std::string &term, uint32_t timestamp) 
             {
                 stampIt(timestamp);
                 isVoid = term.empty();
@@ -150,7 +151,7 @@ namespace TinyGPS
             friend class TinyGPSAsync;
         protected:
             int32_t v = 0;
-            void parse(const string &term, uint32_t timestamp);
+            void parse(const std::string &term, uint32_t timestamp);
         public:
             int32_t Value() const { isNew = false; return v; }
         };
@@ -182,7 +183,7 @@ namespace TinyGPS
                 isVoid = true;
             }
 
-            void parse(const string &term, uint32_t timestamp) 
+            void parse(const std::string &term, uint32_t timestamp) 
             {
                 stampIt(timestamp);
                 isVoid = term.empty();
@@ -226,7 +227,7 @@ namespace TinyGPS
                 isVoid = true;
             }
 
-            void parse(const string &term, uint32_t timestamp) 
+            void parse(const std::string &term, uint32_t timestamp) 
             {
                 DecimalItem::parse(term, timestamp);
                 if (!isVoid)

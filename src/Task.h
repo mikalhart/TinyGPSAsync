@@ -32,14 +32,14 @@ namespace TinyGPS
         enum {UNKNOWN, NMEA, UBX} lastPacketType = UNKNOWN;
 
         Statistics Counters;
-        vector<SatelliteInfo> AllSatellites;
-        string SatelliteTalkerId;
+        std::vector<SatelliteInfo> AllSatellites;
+        std::string SatelliteTalkerId;
 
     private:
-        vector<uint8_t> buffer;
+        std::vector<uint8_t> buffer;
 
         /* Internal items (not guarded) */
-        vector<SatelliteInfo> SatelliteStaging;
+        std::vector<SatelliteInfo> SatelliteStaging;
         Stream *stream = nullptr;
         void clear()
         {

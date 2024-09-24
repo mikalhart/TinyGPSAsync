@@ -75,8 +75,8 @@ void TinyGPSAsync::processUbxNavPvt(const UbxPacket &pu)
     auto timestamp = pu.Timestamp();
     if (payload.size() == 92)
     {
-        byte validityFlags = payload[11];
-        byte flagsFlags = payload[21];
+        uint8_t validityFlags = payload[11];
+        uint8_t flagsFlags = payload[21];
         if (validityFlags & 0x1) // date valid
         {
             uint16_t year = makeU16(payload[4], payload[5]);

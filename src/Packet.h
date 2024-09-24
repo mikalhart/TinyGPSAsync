@@ -1,7 +1,8 @@
 #include <vector>
 #include <map>
+#include <string>
 #include "Utils.h"
-using namespace std;
+// using namespace std;
 
 namespace TinyGPS
 {
@@ -22,24 +23,24 @@ namespace TinyGPS
         virtual bool IsNew() const          { bool temp = isNew; isNew = false; return temp; }
         virtual uint32_t Age() const        { return Utils::msticks() - lastUpdateTime; }
         virtual uint32_t Timestamp() const  { return lastUpdateTime; }
-        virtual string ToString() const = 0;
-        virtual vector<uint8_t> ToBuffer() const = 0;
+        virtual std::string ToString() const = 0;
+        virtual std::vector<uint8_t> ToBuffer() const = 0;
         virtual size_t Size() const = 0;
     };
 
     class UnknownPacket : public Packet
     {
-        vector<uint8_t> buffer;
+        std::vector<uint8_t> buffer;
     public:
-        virtual vector<uint8_t> ToBuffer() const    { return buffer; }
+        virtual std::vector<uint8_t> ToBuffer() const    { return buffer; }
         virtual size_t Size() const                 { return buffer.size(); }
-        virtual string ToString() const
+        virtual std::string ToString() const
         {
             char buf[64];
             sprintf(buf, "Unknown packet: size %d", buffer.size());
             return buf;
         }
-        static UnknownPacket FromBuffer(vector<uint8_t> buffer) 
+        static UnknownPacket FromBuffer(std::vector<uint8_t> buffer) 
         {
             UnknownPacket packet;
             packet.buffer = buffer; 
@@ -50,7 +51,7 @@ namespace TinyGPS
 
     class NmeaPacket : public Packet
     {
-        vector<string> fields;
+        std::vector<std::string> fields;
         bool hasChecksum = false;
         bool checksumValid = false;
         size_t charCount = 0;
@@ -63,17 +64,17 @@ namespace TinyGPS
         /// @brief Tests whether the NMEA checksum is correct
         /// @return true if Checksum is present and valid
         virtual bool ChecksumValid() const      { return checksumValid; }
-        virtual string ToString() const;
-        virtual vector<uint8_t> ToBuffer() const;
+        virtual std::string ToString() const;
+        virtual std::vector<uint8_t> ToBuffer() const;
         virtual size_t Size() const             { return charCount; }
 
-        string TalkerId() const                 { return IsValid() ? fields[0].substr(1, 2) : ""; }
-        string SentenceId() const               { return IsValid() ? fields[0].substr(3) : ""; }
+        std::string TalkerId() const                 { return IsValid() ? fields[0].substr(1, 2) : ""; }
+        std::string SentenceId() const               { return IsValid() ? fields[0].substr(3) : ""; }
         void Clear()                            { fields.clear(); }
-        string operator[](int field) const      { return field >= fields.size() ? "" : fields[field]; }
+        std::string operator[](int field) const      { return field >= fields.size() ? "" : fields[field]; }
         size_t FieldCount() const               { return fields.size(); }
 
-        static NmeaPacket FromString(const string &str);
+        static NmeaPacket FromString(const std::string &str);
         static NmeaPacket Empty;
     };
 
@@ -82,7 +83,7 @@ namespace TinyGPS
         uint8_t sync[2];
         uint8_t clss;
         uint8_t id;
-        vector<uint8_t> payload;
+        std::vector<uint8_t> payload;
         uint8_t chksum[2];
     };
 
@@ -113,14 +114,14 @@ namespace TinyGPS
         const Ubx &Packet() const               { return ubx; }
 
         static UbxPacket FromUbx(const Ubx &ubx);
-        virtual string ToString() const;
-        virtual vector<uint8_t> ToBuffer() const;
+        virtual std::string ToString() const;
+        virtual std::vector<uint8_t> ToBuffer() const;
         static UbxPacket Empty;
     };
 
     struct SentenceMap
     {
-        std::map<string, NmeaPacket> AllSentences;
+        std::map<std::string, NmeaPacket> AllSentences;
         const NmeaPacket &operator[] (const char *id) const 
         { 
             auto ret = AllSentences.find(id);
