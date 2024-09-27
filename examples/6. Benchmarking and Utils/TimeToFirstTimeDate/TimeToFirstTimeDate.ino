@@ -68,8 +68,8 @@ void loop()
             int avgDateSecs = (totalDate + elapsed_secs) / (loopcount + 1);
             bool foundTime = tt == elapsed_secs && tt != Fail;
             bool foundDate = td == elapsed_secs && td != Fail;
-            bool green = foundTime && !foundDate;
-            bool red = failcount > 0;
+            bool green = USE_ANSI_COLOURING && foundTime && !foundDate;
+            bool red = USE_ANSI_COLOURING && failcount > 0;
             Serial.printf("%3d %s%2d:%02d%s %s%2d:%02d%s ", loopcount + 1, 
                 green ? "\033[32m" : "", m, s, green ? "\033[0m" : "",
                 red ? "\033[31m" : "", avgDateSecs / 60, avgDateSecs % 60, red ? "\033[0m" : "");
@@ -84,7 +84,7 @@ void loop()
                 if (gps.DiagnosticCode() != 0)
                     Serial.printf(" %s", gps.DiagnosticString());
             if (elapsed_secs + 1 == Fail)
-                Serial.printf("\033[31m FAIL\033[0m");
+                Serial.printf("%s FAIL%s", USE_ANSI_COLOURING ? "\033[31m" : "", USE_ANSI_COLOURING ? "\033[0m" : "");
             Serial.printf("\r");
         }
     }

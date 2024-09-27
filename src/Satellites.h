@@ -12,6 +12,6 @@ namespace TinyGPS
         uint16_t prn;
         int8_t elevation;
         uint16_t azimuth;
-        uint8_t snr;
+        int8_t snr;
     };
 };

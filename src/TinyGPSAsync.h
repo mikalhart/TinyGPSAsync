@@ -9,7 +9,6 @@
 #endif
 
 #include "esp_task_wdt.h"
-//using namespace std;
 using namespace TinyGPS;
 namespace TinyGPS
 {
@@ -35,6 +34,7 @@ namespace TinyGPS
         bool NewUbxPacketAvailable()                 { return task.hasNewUbxPackets; }
         bool NewUnknownPacketAvailable()             { return task.hasNewUnknownPacket; }
         bool NewPacketAvailable()                    { return task.hasNewPacket; }
+
 
     private:
         uint32_t startTime;

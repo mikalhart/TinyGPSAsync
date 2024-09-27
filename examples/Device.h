@@ -1,5 +1,7 @@
 /* Here's where you customize for your personal ESP32 setup */
 
+#define USE_ANSI_COLOURING true
+
 #if false // Quescan
 #define GPS_RX_PIN D1
 #define GPS_TX_PIN D0

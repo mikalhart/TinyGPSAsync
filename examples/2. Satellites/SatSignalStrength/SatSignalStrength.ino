@@ -14,9 +14,8 @@ void setup()
 
   delay(3000); // Allow ESP32 serial to initialize
 
-  Serial.println("SatElev.ino");
-  Serial.println("Examining GSV satellite data");
-  Serial.println();
+  Serial.println("SatSignalStrength.ino");
+  Serial.println("Examining reported satellite signal strength");
   delay(1000);
 
   gps.begin(GPSSerial);
@@ -40,20 +39,23 @@ void Header(vector<SatelliteInfo> &sats)
 {
   Serial.println();
   string last_id = "";
+
+  // Draw the first line: talker ids and dashes
   for (auto idkvp : current_sats)
     for (auto prnkvp : idkvp.second)
     {
       auto sat = prnkvp.second;
-      auto lastsat = std::prev(idkvp.second.end())->second;
+      SatelliteInfo lastsat = std::prev(std::prev(current_sats.end())->second.end())->second;
       bool islastelt = sat.talker_id == lastsat.talker_id && sat.prn == lastsat.prn;
-      Serial.printf("%-3s%c", 
-        sat.talker_id == last_id ? "---" : sat.talker_id.c_str(),
+      Serial.printf("%-2s-%c", 
+        sat.talker_id == last_id ? "--" : sat.talker_id.c_str(),
         islastelt ? ' ' : '-');
       last_id = sat.talker_id;
     }
   
   Serial.println(); Serial.flush();
 
+  // Draw the second line: satellite PRNs
   for (auto idkvp : current_sats)
     for (auto prnkvp : idkvp.second)
     {
@@ -66,11 +68,12 @@ void Header(vector<SatelliteInfo> &sats)
     }
   Serial.println(); Serial.flush();
 
+  // Draw the third line: mostly dashes
   for (auto idkvp : current_sats)
     for (auto prnkvp : idkvp.second)
     {
         auto sat = prnkvp.second;
-        auto lastsat = std::prev(idkvp.second.end())->second;
+        SatelliteInfo lastsat = std::prev(std::prev(current_sats.end())->second.end())->second;
         bool islastelt = sat.talker_id == lastsat.talker_id && sat.prn == lastsat.prn;
         Serial.printf("---%c", islastelt ? ' ' : '-');
     }
@@ -78,38 +81,40 @@ void Header(vector<SatelliteInfo> &sats)
   Serial.println(); Serial.flush();
 }
 
-#define NO_ELEVATION (-127)
+#define NO_SNR (-127)
 void loop()
 {
   static int linecount = 0;
   if (gps.NewSatellitesAvailable())
   {
-    auto & sats = gps.GetSatellites();
+    auto & sat_report = gps.GetSatellites();
 
     // Anything changed?
     vector<SatelliteInfo> newsats;
     vector<SatelliteInfo> changedsats;
 
-    // Step 1: See if any of the sats in unknown
-    for (auto sat : sats)
+    // Step 1: See if any of the reported sats is new or changed
+    for (auto sat : sat_report)
     {
       if (current_sats.find(sat.talker_id) == current_sats.end() ||
         current_sats[sat.talker_id].find(sat.prn) == current_sats[sat.talker_id].end())
       {
-        Serial.printf("New: %s.%d\r\n", sat.talker_id.c_str(), sat.prn);
+        // Serial.printf("\r\n\nNew: %s.%03d\r\n", sat.talker_id.c_str(), sat.prn);
         newsats.push_back(sat);
       }
-      else if (current_sats[sat.talker_id][sat.prn].elevation != sat.elevation)
+      else if (current_sats[sat.talker_id][sat.prn].snr != sat.snr)
       {
-        current_sats[sat.talker_id][sat.prn].elevation = sat.elevation;
+        current_sats[sat.talker_id][sat.prn].snr = sat.snr;
         changedsats.push_back(sat);
       }
     }
+
+    // Check all the currently know sats to see
     for (auto & idkvp : current_sats)
       for (auto & prnkvp : idkvp.second)
       {
         bool found = false;
-        for (auto sat : sats)
+        for (auto sat : sat_report)
         {
           if (sat.talker_id == idkvp.first && sat.prn == prnkvp.first)
           {
@@ -117,57 +122,56 @@ void loop()
             break;
           }
         }
-        if (!found)
+
+        if (!found && prnkvp.second.snr != NO_SNR)
         {
-          if (prnkvp.second.elevation != NO_ELEVATION)
-          {
-            // Serial.printf("Gone: %s.%d\r\n", idkvp.first.c_str(), prnkvp.first);
-            changedsats.push_back(prnkvp.second);
-            prnkvp.second.elevation = NO_ELEVATION;
-          }
+          changedsats.push_back(prnkvp.second);
+          prnkvp.second.snr = NO_SNR;
         }
       }
 
+    // If anything has changed, draw it
     if (!newsats.empty() || !changedsats.empty())
     {
       linecount++;
+
+      // Draw a new header, as appropriate
       if (linecount == 20 || !newsats.empty())
       {
         current_sats.clear();
         linecount = 0;
-        for (auto sat : sats)
+        for (auto sat : sat_report)
           current_sats[sat.talker_id][sat.prn] = sat;
+        Serial.println();
         Header(newsats);
       }
+
       for (auto idkvp : current_sats)
         for (auto prnkvp : idkvp.second)
-          if (prnkvp.second.elevation == NO_ELEVATION)
+          if (prnkvp.second.snr == NO_SNR)
             Serial.printf("    ");
           else
           {
             bool found = sat_found_in_list(prnkvp.second, changedsats) || sat_found_in_list(prnkvp.second, newsats);
-            if (found)
+            if (found && USE_ANSI_COLOURING)
               Serial.printf("\033[34m"); // blue
-            if (prnkvp.second.elevation < -90 || prnkvp.second.elevation > 90)
-              Serial.printf("??? ");
-            else
-              Serial.printf("%2d%c ", prnkvp.second.elevation, prnkvp.second.used ? '*' : ' ');
-            if (found /* || prnkvp.second.used */)
+            Serial.printf("%2d%c ", prnkvp.second.snr, prnkvp.second.used ? '*' : ' ');
+            if (found && USE_ANSI_COLOURING)
               Serial.printf("\033[0m"); // back to default
           }
       auto &snap = gps.GetSnapshot();
       if (snap.FixStatus.IsPositionValid())
       {
         Serial.printf("- ");
-        Serial.printf("\033[32m"); // green
-        Serial.printf("Fix");
-        Serial.printf("\033[0m"); // back to default
+        if (USE_ANSI_COLOURING) Serial.printf("\033[32m"); // green
+        Serial.printf("Fix   ");
+        if (USE_ANSI_COLOURING) Serial.printf("\033[0m"); // back to default
       }
       else
       {
         Serial.printf("- No Fix");
       }
-      Serial.println();
+      Serial.printf("\r");
     }
   }
 }

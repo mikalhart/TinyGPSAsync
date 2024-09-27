@@ -249,7 +249,6 @@ void TaskSpecific::handleNMEASentence()
                     break;
                 }
                 postNewUnknownPacket();
-                Serial.printf("*** Sentence error: no carriage return\n");
                 break;
             }
 

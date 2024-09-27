@@ -1,5 +1,5 @@
 #include <map>
-// using namespace std;
+#include <string>
 
 namespace TinyGPS
 {
@@ -15,6 +15,7 @@ namespace TinyGPS
 
     class UBXProtocol
     {
+    private:
         static void updateChecksum(byte &ck_A, byte &ck_B, byte b)
         {
             ck_A += b;
@@ -22,10 +23,10 @@ namespace TinyGPS
         }
 
         Stream &stream;
+        friend class TinyGPSAsync;
 
     public:
         UBXProtocol(Stream &stream) : stream(stream) {}
-
         static constexpr uint32_t PACKET_NMEA_GGA = 0x209100BB;
         static constexpr uint32_t PACKET_NMEA_GSV = 0x209100C5;
         static constexpr uint32_t PACKET_NMEA_GSA = 0x209100C0;
